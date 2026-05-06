@@ -9,8 +9,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
+
+
+  <header>
+    <h1>📚 Study Task Tracker</h1>
+    <p>Organize your daily study tasks easily</p>
+  </header>
+
+  <div class="container">
+
+    <div class="input-box">
+      <input type="text" id="taskInput" placeholder="Enter your task...">
+      <button onclick="addTask()">Add Task</button>
+    </div>
+
+    <ul id="taskList"></ul>
+
+  </div>
 
   <header class="site-header">
     <div class="header-inner">
@@ -103,6 +121,11 @@
       <a href="terms.html">Terms of Service</a>
     </nav>
     <p>&copy; 2026 Study Task Tracker</p>
+  </footer>
+
+
+  <footer>
+    <p>© 2026 Study Tracker | Made for students</p>
   </footer>
 
   <script src="script.js"></script>
