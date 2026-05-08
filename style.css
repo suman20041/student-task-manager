@@ -239,18 +239,21 @@ html[data-theme] li button:first-of-type {
   font-size: 0 !important;
   width: 48px;
   height: 48px;
+  border: none;
   border-radius: 12px;
   transition: 0.2s ease;
 }
 
 html[data-theme] li button:first-of-type:hover {
   background: var(--btn-edit-hover) url('icons/edit-icon.svg') center/22px no-repeat !important;
+  border: none;
   outline: none;
 }
 
 html[data-theme] li button:first-of-type:focus {
   background: var(--btn-edit-hover) url('icons/edit-icon.svg') center/22px no-repeat !important;
   outline: 2px solid #4472f1 !important;
+  border: none;
   outline-offset: 2px;
 }
 
@@ -259,18 +262,21 @@ html[data-theme] li button:last-of-type {
   font-size: 0 !important;
   width: 48px;
   height: 48px;
+  border: none;
   border-radius: 12px;
   transition: 0.2s ease;
 }
 
 html[data-theme] li button:last-of-type:hover {
   background: var(--btn-trash-hover) url('icons/trash-icon.svg') center/22px no-repeat !important;
+  border: none;
   outline: none;
 }
 
 html[data-theme] li button:last-of-type:focus {
   background: var(--btn-trash-hover) url('icons/trash-icon.svg') center/22px no-repeat !important;
   outline: 2px solid #f87171 !important;
+  border: none;
   outline-offset: 2px;
 }
 
