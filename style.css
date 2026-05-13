@@ -429,4 +429,45 @@ body {
 /* ✨ Optional glow effect */
 .celebration.show img {
   filter: drop-shadow(0 0 10px gold);
-}.back-to-top { position: fixed; bottom: 2rem; right: 2rem; width: 50px; height: 50px; border-radius: 50%; background: #3b82f6; color: white; border: none; cursor: pointer; font-size: 1.5rem; display: none; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.3s ease; z-index: 1000; } .back-to-top:hover { background: #2563eb; transform: translateY(-3px); } .back-to-top.visible { display: flex; animation: fadeIn 0.3s ease; } @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+}/* Back to Top Button */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+  font-size: 1.8rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 9999;
+}
+
+.back-to-top:hover {
+  background: #1d4ed8;
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+
+.back-to-top.visible {
+  display: flex;
+  animation: slideIn 0.4s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
