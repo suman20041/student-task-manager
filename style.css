@@ -300,6 +300,7 @@ body.dark-mode a {
   --header-bg: #f9fafb;
   --border-color: #ddd;
   --button-bg: #3b82f6;
+  --button-text: #ffffff;
 }
 
 /* Dark Theme */
@@ -310,6 +311,7 @@ body.dark-mode a {
   --header-bg: #1e293b;
   --border-color: #334155;
   --button-bg: #6366f1;
+  --button-text: #ffffff;
 }
 
 /* Blue Theme */
@@ -320,6 +322,7 @@ body.dark-mode a {
   --header-bg: #7dd3fc;       /* header highlight */
   --border-color: #38bdf8;
   --button-bg: #0ea5e9;
+  --button-text: #ffffff;
 }
 
 /* Pastel Theme */
@@ -330,6 +333,7 @@ body.dark-mode a {
   --header-bg: #e9d5ff;       /* lavender header */
   --border-color: #c4b5fd;
   --button-bg: #a5b4fc;
+  --button-text: #1e293b;
 }
 
 /* Apply theme variables */
@@ -357,6 +361,7 @@ html[data-theme] li {
 
 html[data-theme] button {
   background: var(--button-bg) !important;
+  color: var(--button-text) !important;
 }
 .theme-dropdown {
   padding: 8px 12px;
