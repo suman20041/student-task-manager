@@ -1512,6 +1512,28 @@ function createTaskEl(task) {
   const subjectColor = getSubjectColor(task.category);
   const subjectTextColor = getContrastColor(subjectColor);
 
+  if (task.isEditing) {
+    div.innerHTML = `
+      <div class="task-left" style="flex: 1;">
+        <input type="text" value="${escapeHtml(task.text)}" data-edit-id="${task.id}" class="edit-input" style="flex: 1; padding: 0.5rem; border-radius: var(--radius); border: 1px solid var(--button-bg); background: var(--input-bg, var(--card)); color: var(--text); width: 100%;">
+        <div style="display: flex; gap: 5px; margin-top: 0.5rem;">
+          <button onclick="saveEdit(${task.id})" style="padding: 0.4rem 0.8rem; background: #22c55e; border: none; border-radius: var(--radius); color: #fff; cursor: pointer;">Save</button>
+          <button onclick="cancelEdit(${task.id})" style="padding: 0.4rem 0.8rem; background: #94a3b8; border: none; border-radius: var(--radius); color: #fff; cursor: pointer;">Cancel</button>
+        </div>
+      </div>
+    `;
+    // Focus the input and handle keyboard shortcuts
+    const input = div.querySelector('input');
+    if (input) {
+      requestAnimationFrame(() => input.focus());
+      input.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') saveEdit(task.id);
+        if (e.key === 'Escape') cancelEdit(task.id);
+      });
+    }
+    return div;
+  }
+
   div.innerHTML = `
     <div class="drag-handle" title="Drag to reorder"><i class="ri-drag-move-fill"></i></div>
     <div class="task-left">
@@ -1687,15 +1709,9 @@ function createTaskEl(task) {
     });
   }
 
-  // Edit task event
+  // Edit task event — inline editing
   div.querySelector(".edit-btn").addEventListener("click", () => {
-    const updated = prompt("Edit your quest", task.text);
-    if (updated !== null && updated.trim() !== "") {
-      task.text = updated;
-      saveData();
-      renderTasks();
-      announce(`Task edited to: "${updated}"`);
-    }
+    editTask(task.id);
   });
 
   // HTML5 Drag Listeners on the card
@@ -4205,30 +4221,45 @@ function toggleTask(id) {
 }
 
 function editTask(id) {
-  const task = tasks.find(t => t.id === id);
-  if (!task) return;
-  const newText = prompt("Edit task:", task.text);
-  if (newText !== null && newText.trim() !== "") {
-    if (newText.trim().length > MAX_TASK_LENGTH) {
+  tasks = tasks.map(task => {
+    if (task.id === id) {
+      return { ...task, isEditing: true };
+    }
+    return task;
+  });
+  renderTasks();
+}
+
+function saveEdit(id) {
+  const input = document.querySelector(`input[data-edit-id="${id}"]`);
+  if (!input) return;
+  const newText = input.value.trim();
+
+  if (newText !== "") {
+    if (newText.length > MAX_TASK_LENGTH) {
       alert(`Task is too long. Please keep it under ${MAX_TASK_LENGTH} characters.`);
       return;
     }
-    task.text = newText.trim();
+    tasks = tasks.map(task => {
+      if (task.id === id) {
+        return { ...task, text: newText, isEditing: false };
+      }
+      return task;
+    });
+    saveAndRender();
+  } else {
+    cancelEdit(id);
   }
-  // prompt for dependency selection (minimal UI): allow selecting multiple by comma-separated indices
-  const choices = tasks.filter(t => t.id !== id).map((t, i) => `${i+1}. ${t.text} (id:${t.id}${t.completed? ' ✓':''})`);
-  const sel = prompt(`Select prerequisite numbers (comma separated) or empty = none:\n${choices.join('\n')}`);
-  if (sel !== null) {
-    if (sel.trim() === '') {
-      task.depends = [];
-    } else {
-      const parts = sel.split(/[,\s]+/).map(s => Number(s)).filter(n => Number.isFinite(n) && n>=1 && n<=choices.length);
-      const chosen = parts.map(n => tasks.filter(t => t.id !== id)[n-1]).filter(Boolean).map(t => t.id);
-      // filter out circular dependencies
-      task.depends = chosen.filter(did => !hasCircularDependency(task.id, did));
+}
+
+function cancelEdit(id) {
+  tasks = tasks.map(task => {
+    if (task.id === id) {
+      return { ...task, isEditing: false };
     }
-  }
-  saveAndRender();
+    return task;
+  });
+  renderTasks();
 }
 
 function saveAndRender() {
