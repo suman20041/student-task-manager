@@ -69,12 +69,9 @@ function addTask() {
 
 }
 /* =========================
-   CUSTOM THEME DROPDOWN
+   THEME PICKER (ICONS)
 ========================= */
-const themeDropdown = document.getElementById("themeDropdown");
-const dropdownTrigger = document.getElementById("dropdownTrigger");
-const dropdownMenu = document.getElementById("dropdownMenu");
-const dropdownItems = document.querySelectorAll(".dropdown-item");
+const themeBtns = document.querySelectorAll(".theme-btn");
 
 // Load and apply saved theme
 const savedTheme = localStorage.getItem("theme") || "light";
@@ -84,34 +81,15 @@ function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem("theme", theme);
   
-  // Update trigger UI
-  const selectedItem = document.querySelector(`.dropdown-item[data-value="${theme}"]`);
-  if (selectedItem && dropdownTrigger) {
-    const icon = selectedItem.querySelector(".material-symbols-outlined").textContent;
-    const text = selectedItem.textContent.trim().replace(icon, "").trim();
-    dropdownTrigger.querySelector(".icon").textContent = icon;
-    dropdownTrigger.querySelector(".text").textContent = text;
-  }
-}
-
-if (dropdownTrigger) {
-  dropdownTrigger.addEventListener("click", () => {
-    themeDropdown.classList.toggle("active");
-  });
-
-  // Close dropdown when clicking outside
-  window.addEventListener("click", (e) => {
-    if (!themeDropdown.contains(e.target)) {
-      themeDropdown.classList.remove("active");
-    }
+  // Update active state in UI
+  themeBtns.forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-theme") === theme);
   });
 }
 
-dropdownItems.forEach(item => {
-  item.addEventListener("click", () => {
-    const theme = item.getAttribute("data-value");
-    applyTheme(theme);
-    themeDropdown.classList.remove("active");
+themeBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    applyTheme(btn.getAttribute("data-theme"));
   });
 });
 
