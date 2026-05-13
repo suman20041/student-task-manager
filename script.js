@@ -1,6 +1,10 @@
 function addTask() {
   const input = document.getElementById("taskInput");
+  const priorityInput = document.getElementById("priorityInput");
+  const dueDateInput = document.getElementById("dueDateInput");
   const task = input.value.trim();
+  const priority = priorityInput.value;
+  const dueDate = dueDateInput.value;
   const errorMsg = document.getElementById("errorMsg");
 
   if (task === "") {
@@ -15,11 +19,14 @@ function addTask() {
   const taskData = {
     text: task,
     completed: false,
-    timestamp: timestamp
+    timestamp: timestamp,
+    priority: priority,
+    dueDate: dueDate
   };
 
   createTaskElement(taskData);
   input.value = "";
+  dueDateInput.value = "";
   taskTracker();
   saveTasks();
 }
@@ -29,6 +36,8 @@ function createTaskElement(task) {
   li.innerHTML = `
     <input type="checkbox" ${task.completed ? 'checked' : ''}>
     <span class="${task.completed ? 'completed' : ''}">${task.text}</span>
+    <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+    ${task.dueDate ? `<span class="due-date">📅 ${task.dueDate}</span>` : ''}
     <small style="margin-left: 10px; color: #888;">${task.timestamp}</small>
     <button class="edit-btn">Edit</button>
     <button class="remove-btn">Remove</button>
@@ -72,10 +81,13 @@ function createTaskElement(task) {
 function saveTasks() {
   const tasks = [];
   document.querySelectorAll("#taskList li").forEach((li) => {
+    const dueDateEl = li.querySelector(".due-date");
     tasks.push({
       text: li.querySelector("span").textContent,
       completed: li.querySelector("input").checked,
-      timestamp: li.querySelector("small").textContent
+      timestamp: li.querySelector("small").textContent,
+      priority: li.querySelector(".priority-badge").textContent,
+      dueDate: dueDateEl ? dueDateEl.textContent.replace("📅 ", "") : ""
     });
   });
   localStorage.setItem("tasks", JSON.stringify(tasks));
@@ -116,15 +128,40 @@ if (searchInput) {
 function taskTracker() {
   const tasks = document.querySelectorAll("#taskList li");
   const completed = document.querySelectorAll("#taskList input:checked");
-  const stats = document.getElementById("taskStats");
-  if (stats) stats.innerText = `✅ ${completed.length} / ${tasks.length} completed`;
   
+  const progress = tasks.length > 0 ? (completed.length / tasks.length) * 100 : 0;
+  const progressBar = document.getElementById("progressBar");
+  if (progressBar) progressBar.style.width = progress + "%";
+
+  const stats = document.getElementById("taskStats");
+  if (stats) stats.innerText = `✅ ${completed.length} / ${tasks.length} completed (${Math.round(progress)}%)`;
+
   const celebration = document.getElementById("celebration");
   if (tasks.length > 0 && tasks.length === completed.length) {
     celebration.classList.remove("hidden");
     celebration.classList.add("show");
+    if (typeof confetti === 'function') {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
   } else {
     celebration.classList.remove("show");
     celebration.classList.add("hidden");
   }
+}
+
+/* Theme Switcher */
+const themeSwitcher = document.getElementById("themeSwitcher");
+const savedTheme = localStorage.getItem("theme") || "light";
+document.documentElement.setAttribute("data-theme", savedTheme);
+if (themeSwitcher) {
+  themeSwitcher.value = savedTheme;
+  themeSwitcher.addEventListener("change", (e) => {
+    const selectedTheme = e.target.value;
+    document.documentElement.setAttribute("data-theme", selectedTheme);
+    localStorage.setItem("theme", selectedTheme);
+  });
 }
