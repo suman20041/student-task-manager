@@ -42,11 +42,20 @@ function createTaskElement(task) {
   });
 
   const editButton = li.querySelector('.edit-btn');
+  const span = li.querySelector('span');
   editButton.addEventListener("click", () => {
-    const span = li.querySelector('span');
-    const newTask = prompt("Edit task:", span.textContent);
-    if (newTask !== null) {
-      span.textContent = newTask;
+    if (editButton.textContent === "Edit") {
+      const inputEdit = document.createElement("input");
+      inputEdit.type = "text";
+      inputEdit.value = span.textContent;
+      li.replaceChild(inputEdit, span);
+      editButton.textContent = "Save";
+      inputEdit.focus();
+    } else {
+      const inputEdit = li.querySelector('input[type="text"]');
+      span.textContent = inputEdit.value;
+      li.replaceChild(span, inputEdit);
+      editButton.textContent = "Edit";
       saveTasks();
     }
   });
@@ -93,6 +102,17 @@ if (clearAllBtn) {
   });
 }
 
+const searchInput = document.getElementById("searchInput");
+if (searchInput) {
+  searchInput.addEventListener("input", function () {
+    const query = searchInput.value.toLowerCase();
+    document.querySelectorAll("#taskList li").forEach((li) => {
+      const text = li.querySelector("span").textContent.toLowerCase();
+      li.style.display = text.includes(query) ? "flex" : "none";
+    });
+  });
+}
+
 function taskTracker() {
   const tasks = document.querySelectorAll("#taskList li");
   const completed = document.querySelectorAll("#taskList input:checked");
@@ -108,4 +128,3 @@ function taskTracker() {
     celebration.classList.add("hidden");
   }
 }
-const searchInput = document.getElementById(" searchInput\); if (searchInput) { searchInput.addEventListener(\input\, function () { const query = searchInput.value.toLowerCase(); document.querySelectorAll(\#taskList li\).forEach((li) => { const text = li.querySelector(\span\).textContent.toLowerCase(); li.style.display = text.includes(query) ? \flex\ : \none\; }); }); }
