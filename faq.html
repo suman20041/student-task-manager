@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ - Study Task Tracker</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .faq-accordion {
+      margin-top: 2rem;
+    }
+    .faq-item {
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 0;
+    }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text-color);
+      text-align: left;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+    }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+      color: var(--text-muted);
+      padding-right: 2rem;
+    }
+    .faq-item.active .faq-answer {
+      max-height: 200px;
+      padding-top: 1rem;
+    }
+    .faq-icon {
+      transition: transform 0.3s;
+    }
+    .faq-item.active .faq-icon {
+      transform: rotate(180deg);
+    }
+  </style>
+</head>
+<body data-theme="dark">
+  <header class="site-header">
+    <h1>❓ Frequently Asked Questions</h1>
+    <nav>
+      <a href="index.html">🏠 Home</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="faq-accordion">
+      <div class="faq-item">
+        <button class="faq-question">
+          <span>How is my data saved?</span>
+          <span class="faq-icon">▼</span>
+        </button>
+        <div class="faq-answer">
+          <p>We use your browser's Local Storage to save tasks. This means your data stays on your machine and is never uploaded to any server.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          <span>Will I lose my tasks if I close the tab?</span>
+          <span class="faq-icon">▼</span>
+        </button>
+        <div class="faq-answer">
+          <p>No! Local Storage persists even after you close the browser or restart your computer. However, clearing browser history/cache might delete them.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          <span>Is there a mobile app?</span>
+          <span class="faq-icon">▼</span>
+        </button>
+        <div class="faq-answer">
+          <p>This is a web-based tool, but it is fully responsive and works perfectly on mobile browsers. You can even "Add to Home Screen" for an app-like experience.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          <span>Can I sync my tasks across devices?</span>
+          <span class="faq-icon">▼</span>
+        </button>
+        <div class="faq-answer">
+          <p>Currently, no. Since we value privacy and don't require accounts, tasks are specific to the device and browser where they were created.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Study Task Tracker. Simple. Private. Fast.</p>
+  </footer>
+
+  <script>
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+
+    // Accordion Logic
+    document.querySelectorAll('.faq-question').forEach(button => {
+      button.addEventListener('click', () => {
+        const item = button.parentElement;
+        item.classList.toggle('active');
+      });
+    });
+  </script>
+</body>
+</html>
