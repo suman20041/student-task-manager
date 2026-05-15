@@ -1,88 +1,98 @@
 # 🪻 Nexus Spring of Code Initiative ⭐
 
-## 📚 Nexus Task Master (Enhanced Version)
+# 📚 Student Task Manager
 
 **Github Repository:**
-<https://github.com/Sejal10406/student-task-manager>
+https://github.com/Sejal10406/student-task-manager
+
+A professional, high-performance web application designed for students to organize their study tasks with a modern, icon-rich interface and multi-theme support.
 
 ---
 
-## 💎 Premium Overhaul (Major Update)
-
-This project has been significantly modified and strengthened to transition from a basic study tracker to a premium, feature-rich task management suite. Every aspect of the "OG" version has been optimized for performance, accessibility, and visual excellence.
-
-### 🚀 New & Improved Features
-
-* 💾 **Persistent Storage**: Full `localStorage` integration. Your tasks are now saved across browser sessions!
-* 🎨 **Premium UI/UX**: Complete redesign using **Glassmorphism** and the **Outfit** typography for a high-fidelity look.
-* 🏷️ **Smart Categorization**: Organise tasks into **Study, Personal, Work, or Health**.
-* 🚨 **Priority Levels**: Assign **Low, Medium, or High** priority to tasks with visual color coding.
-* 🔍 **Real-time Search**: Instantly find any task with the newly integrated search engine.
-* 📈 **Progress Tracking**: Dynamic progress bar that visualizes your completion percentage.
-* 🧹 **Bulk Actions**: Added a "Clear All" button for quick resets.
-* 📱 **Fully Responsive**: Optimized for every device, from mobile to ultra-wide monitors.
-* 🎊 **Enhanced Celebration**: A refined, animated celebration system for task completion.
-
----
-
-## 💻 Tech Stack
-
-* **HTML5** (Semantic Structure)
-* **CSS3** (Glassmorphism, CSS Variables, Flexbox/Grid)
-* **JavaScript** (ES6+, LocalStorage API)
-* **Google Fonts** (Outfit)
+## 🚀 Key Features
+- **Modern UI/UX**: Clean, minimalist design with professional **Material Symbols icons**.
+- **Multi-Theme System**: Choose between Light, Dark, Blue, and Pastel modes with a single click.
+- **Local Persistence**: Your tasks are saved automatically in your browser's local storage—no data loss on refresh!
+- **Real-time Search**: Instant filtering to find specific tasks in seconds.
+- **Timestamp Tracking**: Automatic recording of when tasks were created.
+- **Accessibility First**: Semantic HTML5 and keyboard-friendly navigation.
 
 ---
 
 ## 🎯 Project Vision
+- 👶 **Beginner-friendly** and easy to understand project.
+- 🚀 Perfect starting point for your **first open-source contribution**.
+- 🧩 Focus on simple implementation and practical features.
+- 🎨 Clean and minimal UI for better learning experience.
+- 🌱 Helps new contributors learn real-world development basics.
 
-* 👶 **Beginner-friendly** but with professional-grade standards.
-* 🚀 A showcase of how to transform a simple app into a **strong production-ready** tool.
-* 🧩 Focus on clean, modular JavaScript and scalable CSS.
+---
+
+## 🛠️ Technology Stack
+- **HTML5**: Semantic structure for better SEO and accessibility.
+- **CSS3**: Modern layouts using Flexbox/Grid and CSS Variables for dynamic themes.
+- **Vanilla JavaScript**: Lightweight, fast logic for task management and theme switching.
+- **Google Material Symbols**: High-quality icons for a premium look.
 
 ---
 
 ## 📁 Project Structure
-
-```text
-Nexus-Task-Master/
-│── index.html       # Enhanced Semantic Structure
-│── style.css        # Premium Design System
-│── script.js       # Optimized Logic & Persistence
-│── README.md        # Detailed Documentation
-│── CONTRIBUTING.md  # Modern Guidelines
+```
+student-task-manager/
+│── index.html       # Application structure & UI
+│── style.css        # Design system & theme variables
+│── script.js        # Core logic & local storage management
+│── README.md        # Project overview
+│── INSTRUCTIONS.md  # Detailed file-by-file breakdown
 ```
 
 ---
 
-## 🤝 Steps to Contribute
+## 🚀 Let's Start
 
-1. 📌 Go to the **Issues** section
-2. 🔍 Choose an issue you want to work on
-3. 🍴 Fork the repository
-4. 🌿 Create a new branch
-5. 🛠️ Make your changes following the new design system
-6. 💾 Commit with meaningful messages
-7. 🚀 Push to GitHub
-8. 🎉 Create a Pull Request
+### 1️⃣ Fork the Repository
+Click on the **Fork** button (top-right of GitHub).
+
+### 2️⃣ Clone Your Fork
+```bash
+git clone https://github.com/your-username/student-task-manager.git
+```
+
+### 3️⃣ Navigate to Project
+```bash
+cd student-task-manager
+```
+
+### 4️⃣ Open the Project
+Open `index.html` in your browser.
 
 ---
 
-## 📌 Contribution Guidelines (Rules)
+## 🤝 Steps to Contribute
+1. 📌 Go to the **Issues** section.
+2. 🔍 Choose an issue you want to work on.
+3. 💬 Comment on the issue to get assigned.
+4. 🌿 Create a new branch: `git checkout -b feature/your-feature-name`.
+5. 🛠️ Make your changes (Features, Bug fixes, UI/UX, Docs).
+6. 💾 Commit: `git commit -m "Added: your feature name"`.
+7. 🚀 Push: `git push origin feature/your-feature-name`.
+8. 🎉 Create a Pull Request from your fork.
 
+---
+
+## 📌 Contribution Guidelines
 * 🚫 Avoid spam or irrelevant contributions.
-* ✅ Maintain the **Glassmorphism** aesthetic.
-* 🧹 Follow clean code practices (DRY principle).
-* 📝 Clearly describe your changes in PR messages.
+* ✅ Keep changes meaningful and related to the project.
+* 🧹 Follow clean code practices and proper formatting.
+* 📝 Clearly describe your changes in PR/commit messages.
 
-***🧭Discipline is the bridge between goals and accomplishment***
+***🧭 Discipline is the bridge between goals and accomplishment***
 
 ---
 
 ## 💖 Show Your Support
+- ⭐ Give a star to the repository.
+- 🍴 Fork the project and try improvements.
+- 💬 Share feedback and suggestions.
 
-* ⭐ Give a star to the repository
-* 🍴 Fork the project and try improvements
-* 🤝 Contribute with pull requests
-
-## 🚀 This project is now stronger than ever thanks to the community efforts! Happy coding! 💻✨
+**🚀 Wishing all contributors the best of success. Happy coding! 💻✨**
