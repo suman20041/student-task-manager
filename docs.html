@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation - Study Task Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+  <header class="site-header">
+    <h1>📖 Documentation</h1>
+    <nav>
+      <a href="index.html">🏠 Home</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section>
+      <h2>🚀 Getting Started</h2>
+      <p>Simply enter your task in the input box, select a priority, choose a due date, and click <strong>Add</strong>.</p>
+    </section>
+
+    <section style="margin-top: 2rem;">
+      <h2>🔍 Search & Filtering</h2>
+      <p>Use the search bar to quickly find tasks. The list filters in real-time as you type.</p>
+    </section>
+
+    <section style="margin-top: 2rem;">
+      <h2>✏️ Editing Tasks</h2>
+      <p>Click the <strong>Edit</strong> button on any task to change its text inline. Click <strong>Save</strong> to commit your changes.</p>
+    </section>
+
+    <section style="margin-top: 2rem;">
+      <h2>📊 Progress Tracking</h2>
+      <p>The progress bar at the bottom updates automatically as you complete tasks. Finish all tasks to trigger a celebration!</p>
+    </section>
+
+    <section style="margin-top: 2rem;">
+      <h2>🎨 Themes</h2>
+      <p>Switch between Light, Dark, Blue, and Pastel themes using the dropdown in the header. Your preference is saved automatically.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Study Task Tracker. Empowering students.</p>
+  </footer>
+
+  <script>
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  </script>
+</body>
+</html>
