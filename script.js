@@ -1,79 +1,19 @@
-const taskInput = document.getElementById("taskInput");
-const addTaskBtn = document.getElementById("addTaskBtn");
-const taskList = document.getElementById("taskList");
-const categorySelect = document.getElementById("categorySelect");
-
-const totalTasks = document.getElementById("totalTasks");
-const completedTasks = document.getElementById("completedTasks");
-
-const points = document.getElementById("points");
-const streakCount = document.getElementById("streakCount");
-
-const filterBtns = document.querySelectorAll(".filter-btn");
-
-const themeToggle = document.getElementById("themeToggle");
-
-const xpFill = document.getElementById("xpFill");
-const xpText = document.getElementById("xpText");
-
-let tasks = [];
-
-let currentFilter = "All";
-
-let coins = 0;
-
-let streak = 0;
-
-let xp = 120;
-
-/* ADD TASK */
-
-function addTask() {
-
-  const text = taskInput.value.trim();
-
-  const category = categorySelect.value;
-
-  if (text === "") return;
-
-  const task = {
-    id: Date.now(),
-    text,
-    category,
-    completed: false
+document.addEventListener("DOMContentLoaded", () => {
+  const elements = {
+    taskForm: document.getElementById("taskForm"),
+    taskInput: document.getElementById("taskInput"),
+    categoryInput: document.getElementById("categoryInput"),
+    taskList: document.getElementById("taskList"),
+    taskStats: document.getElementById("taskStats"),
+    searchInput: document.getElementById("searchInput"),
+    sortAscBtn: document.getElementById("sortAscBtn"),
+    sortDescBtn: document.getElementById("sortDescBtn"),
+    filterButtons: document.getElementById("filterButtons"),
+    errorMsg: document.getElementById("errorMsg"),
+    themeSwitcher: document.getElementById("themeSwitcher"),
+    emptyState: document.getElementById("emptyState"),
+    celebration: document.getElementById("celebration"),
   };
-
-  tasks.push(task);
-
-  taskInput.value = "";
-
-  renderTasks();
-}
-
-/* RENDER */
-
-function renderTasks() {
-
-  taskList.innerHTML = "";
-
-  let filteredTasks = tasks;
-
-  if (currentFilter !== "All") {
-
-    filteredTasks = tasks.filter(
-      task => task.category === currentFilter
-    );
-
-  }
-
-  if (filteredTasks.length === 0) {
-
-    taskList.innerHTML = `
-      <div class="empty-state">
-
-        <i class="ri-ghost-2-line"></i>
-
-        <h3>No Tasks Yet</h3>
 
         <p>
           Add tasks and begin your productivity journey ✨
@@ -260,12 +200,89 @@ taskInput.addEventListener("keypress", e => {
   }
 
 });
+let studyTime = 25 * 60;
+let breakTime = 5 * 60;
 
-/* BUTTON */
+let currentTime = studyTime;
 
-addTaskBtn.addEventListener(
-  "click",
-  addTask
-);
+let timer;
+let isStudy = true;
 
-updateGamification();
+function updateDisplay() {
+
+  let minutes = Math.floor(currentTime / 60);
+  let seconds = currentTime % 60;
+
+  seconds = seconds < 10 ? "0" + seconds : seconds;
+
+  document.getElementById("timer").innerText =
+    `${minutes}:${seconds}`;
+}
+
+function startTimer() {
+
+  if (timer) return;
+
+  timer = setInterval(() => {
+
+    currentTime--;
+
+    updateDisplay();
+
+    if (currentTime <= 0) {
+
+      clearInterval(timer);
+      timer = null;
+
+      if (isStudy) {
+
+        alert("Study session complete! Take a break.");
+
+        isStudy = false;
+        currentTime = breakTime;
+
+        document.getElementById("mode").innerText =
+          "Break Time";
+
+      } else {
+
+        alert("Break over! Back to study.");
+
+        isStudy = true;
+        currentTime = studyTime;
+
+        document.getElementById("mode").innerText =
+          "Study Time";
+      }
+
+      updateDisplay();
+
+      startTimer();
+    }
+
+  }, 1000);
+}
+
+function pauseTimer() {
+
+  clearInterval(timer);
+  timer = null;
+}
+
+function resetTimer() {
+
+  clearInterval(timer);
+  timer = null;
+
+  isStudy = true;
+  currentTime = studyTime;
+
+  document.getElementById("mode").innerText =
+    "Study Time";
+
+  updateDisplay();
+}
+
+updateDisplay();
+new Notification("Break Time!");
+
