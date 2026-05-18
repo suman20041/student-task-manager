@@ -56,7 +56,7 @@
 
         <div class="xp-container">
           <div class="xp-info">
-            <span>Level 3</span>
+            <span id="xpLevel">Level 3</span>
             <span id="xpText">120 / 300 XP</span>
           </div>
 
@@ -64,7 +64,7 @@
             <div class="xp-fill" id="xpFill"></div>
           </div>
 
-      </div>
+        </div>
 
       <!-- STATS -->
       <div class="stats-grid">
@@ -95,34 +95,27 @@
 
       </div>
 
-      <!-- BADGES -->
+      <!-- DYNAMIC BADGES -->
       <div class="badges-card">
-
         <div class="card-title">
           <i class="ri-medal-fill"></i>
           <span>Achievements</span>
         </div>
-
-        <div class="badges">
-
-          <div class="badge unlocked">
-            🥇
-          </div>
-
-          <div class="badge unlocked">
-            🔥
-          </div>
-
-          <div class="badge">
-            🚀
-          </div>
-
-          <div class="badge">
-            👑
-          </div>
-
+        <div class="badges" id="badgesGrid">
+          <!-- Dynamically populated by JS -->
         </div>
+      </div>
 
+      <!-- WEEKLY STREAK TRACKER -->
+      <div class="streak-tracker-card glass">
+        <div class="card-title">
+          <i class="ri-fire-fill"></i>
+          <span>Weekly Streak Tracker</span>
+        </div>
+        <div class="streak-days" id="streakDaysGrid">
+          <!-- Dynamically populated circular check-in cells by JS -->
+        </div>
+        <p class="streak-footer">Complete at least one task or study session daily to protect your streak!</p>
       </div>
 
     </aside>
@@ -393,6 +386,55 @@
       <button id="mobileAddTaskBtn">
         <i class="ri-add-line"></i>Create Quest
       </button>
+    </div>
+  </div>
+
+  <!-- CONFETTI DUST EFFECT CONTAINER -->
+  <div class="confetti-container" id="confettiContainer"></div>
+
+  <!-- LEVEL UP POPUP WIDGET -->
+  <div class="popup-overlay" id="levelUpPopupOverlay"></div>
+  <div class="popup-card glass level-up-card" id="levelUpPopup">
+    <div class="popup-glow"></div>
+    <div class="popup-badge">🏆</div>
+    <h2>LEVEL UP!</h2>
+    <p class="popup-sub">You have reached <span id="popupLevelText">Level 4</span>!</p>
+    <div class="popup-rewards-list">
+      <div class="reward-item">
+        <i class="ri-money-dollar-circle-fill"></i>
+        <span>+50 Coins Reward</span>
+      </div>
+      <div class="reward-item">
+        <i class="ri-sparkling-fill"></i>
+        <span>+100 XP Bonus</span>
+      </div>
+    </div>
+    <button class="popup-claim-btn" id="claimLevelBtn">Claim Rewards ✨</button>
+  </div>
+
+  <!-- CUMULATIVE FOCUS MILESTONE POPUP WIDGET -->
+  <div class="popup-overlay" id="milestonePopupOverlay"></div>
+  <div class="popup-card glass milestone-card" id="milestonePopup">
+    <div class="popup-glow"></div>
+    <div class="popup-badge">🚀</div>
+    <h2>MILESTONE UNLOCKED!</h2>
+    <p class="popup-sub" id="milestoneTitle">Focus Elite</p>
+    <p class="popup-desc" id="milestoneDesc">Accumulated 60 minutes of cumulative study time!</p>
+    <div class="popup-rewards-list">
+      <div class="reward-item">
+        <i class="ri-medal-fill"></i>
+        <span>+100 Coins Reward</span>
+      </div>
+    </div>
+    <button class="popup-claim-btn" id="claimMilestoneBtn">Awesome!</button>
+  </div>
+
+  <!-- FLOATING ACHIEVEMENT TOAST ALERT -->
+  <div class="achievement-toast glass" id="achievementToast">
+    <div class="toast-icon">🏆</div>
+    <div class="toast-content">
+      <h4>Achievement Unlocked!</h4>
+      <p id="toastAchievementName">Focus Master</p>
     </div>
   </div>
 

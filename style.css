@@ -534,26 +534,25 @@ body {
 }
 
 .badges {
-  display: flex;
-  gap: 15px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-top: 15px;
 }
 
 .badge {
-  width: 65px;
-  height: 65px;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.05);
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
-  opacity: 0.3;
-}
-
-.badge.unlocked {
-  opacity: 1;
-  box-shadow: 0 0 20px rgba(124,58,237,0.4);
+  font-size: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* MAIN */
@@ -1851,5 +1850,396 @@ body.light .drawer-body select,
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(168, 85, 247, 0.4);
 }
+
+/* ==========================================================================
+   PHASE 8: INTERACTIVE GAMIFICATION, OVERLAYS, CONFETTI & BADGES
+   ========================================================================== */
+
+/* 1. Dynamic Achievements Grids */
+
+/* Locked state */
+.badge.locked {
+  filter: grayscale(1) opacity(0.35);
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Unlocked state */
+.badge.unlocked {
+  filter: none !important;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--primary);
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
+  animation: badgeUnlockPulse 2.5s infinite alternate;
+}
+
+.badge.unlocked:hover {
+  transform: translateY(-5px) scale(1.1);
+  box-shadow: 0 8px 25px rgba(168, 85, 247, 0.4);
+}
+
+@keyframes badgeUnlockPulse {
+  0% { border-color: var(--primary); box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); }
+  100% { border-color: var(--secondary); box-shadow: 0 0 20px rgba(6, 182, 212, 0.5); }
+}
+
+/* Achievement Cell Tooltips */
+.badge::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -45px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.85);
+  background: rgba(15, 23, 42, 0.95);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.1);
+  z-index: 100;
+}
+
+.badge:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+  bottom: -40px;
+}
+
+/* 2. Weekly Streak Tracker Card Widget */
+.streak-tracker-card {
+  border-radius: 28px;
+  padding: 25px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow);
+}
+
+.streak-days {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  margin: 15px 0;
+}
+
+.streak-day-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  padding: 8px 2px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--textLight);
+  transition: all 0.3s ease;
+  min-width: 0;
+}
+
+body.light .streak-day-cell,
+[data-theme="sunset"] .streak-day-cell {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.streak-day-cell span {
+  font-family: 'Poppins', sans-serif;
+}
+
+.streak-day-cell .day-indicator {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  font-size: 11px;
+}
+
+body.light .streak-day-cell .day-indicator,
+[data-theme="sunset"] .streak-day-cell .day-indicator {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* Active Completed Day Flame Glow */
+.streak-day-cell.active {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: #ef4444;
+  color: var(--text);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
+.streak-day-cell.active .day-indicator {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  color: white;
+  border: none;
+  font-size: 16px;
+  animation: flameBounce 1.5s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes flameBounce {
+  0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.5)); }
+  100% { transform: scale(1.15); filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8)); }
+}
+
+.streak-footer {
+  font-size: 11px;
+  color: var(--textLight);
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* 3. Responsive Popup overlays and Claims Dialogs */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  z-index: 9000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.popup-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.popup-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  width: 90%;
+  max-width: 440px;
+  background: var(--card) !important;
+  border: 1px solid var(--border);
+  border-radius: 36px;
+  padding: 40px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9001;
+  box-shadow: var(--shadow);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+.popup-card.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.popup-glow {
+  position: absolute;
+  top: -150px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, rgba(168, 85, 247, 0) 70%);
+  pointer-events: none;
+}
+
+.popup-badge {
+  font-size: 70px;
+  margin-bottom: 20px;
+  display: inline-block;
+  animation: popupItemFloat 2.5s infinite alternate ease-in-out;
+}
+
+@keyframes popupItemFloat {
+  0% { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(-12px) rotate(8deg); }
+}
+
+.popup-card h2 {
+  font-size: 32px;
+  font-weight: 800;
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+
+.popup-sub {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 25px;
+}
+
+.popup-sub span {
+  color: var(--secondary);
+}
+
+.popup-desc {
+  font-size: 14px;
+  color: var(--textLight);
+  margin-bottom: 25px;
+  line-height: 1.6;
+}
+
+.popup-rewards-list {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.reward-item {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+body.light .reward-item,
+[data-theme="sunset"] .reward-item {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.reward-item i {
+  font-size: 20px;
+  color: #f59e0b;
+}
+
+.popup-claim-btn {
+  width: 100%;
+  border: none;
+  border-radius: 18px;
+  padding: 18px;
+  font-weight: 700;
+  font-size: 16px;
+  color: white;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: 0 8px 25px rgba(168, 85, 247, 0.4);
+  transition: all 0.3s ease;
+  font-family: 'Poppins', sans-serif;
+}
+
+.popup-claim-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(168, 85, 247, 0.6);
+}
+
+.popup-claim-btn:active {
+  transform: translateY(-1px);
+}
+
+/* 4. Sliding Achievement Toast Alerts */
+.achievement-toast {
+  position: fixed;
+  bottom: -120px;
+  right: 25px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(15, 12, 38, 0.85) !important;
+  border: 1px solid var(--primary);
+  border-radius: 22px;
+  padding: 18px 24px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(25px);
+  z-index: 8000;
+  transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  max-width: 320px;
+}
+
+[data-theme="sunset"] .achievement-toast {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: var(--primary);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+}
+
+.achievement-toast.show {
+  bottom: 25px;
+}
+
+@media(max-width: 900px) {
+  .achievement-toast.show {
+    bottom: 110px; /* Positions toast cleanly above mobile navigation bar */
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 90%;
+  }
+}
+
+.toast-icon {
+  font-size: 32px;
+  animation: pulseRotate 2s infinite alternate ease-in-out;
+}
+
+@keyframes pulseRotate {
+  0% { transform: scale(1) rotate(0deg); }
+  100% { transform: scale(1.15) rotate(15deg); }
+}
+
+.toast-content h4 {
+  font-size: 14px;
+  font-family: 'Poppins', sans-serif;
+  color: var(--primary);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.toast-content p {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* 5. CSS falling confetti particles */
+.confetti-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.confetti-particle {
+  position: absolute;
+  top: -20px;
+  border-radius: 2px;
+  animation: fallDown linear forwards;
+}
+
+@keyframes fallDown {
+  0% {
+    transform: translateY(0) rotate(0deg) translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(105vh) rotate(720deg) translateX(50px);
+    opacity: 0;
+  }
+}
+
 
 

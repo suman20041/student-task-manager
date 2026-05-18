@@ -41,8 +41,27 @@ let analyticsData = {
   },
   longestStreak: 0,
   currentStreak: 0,
-  lastActiveDate: null
+  lastActiveDate: null,
+  unlockedAchievements: [],    // e.g. ["novice", "spark"]
+  unlockedMilestones: []       // e.g. ["30mins", "60mins"]
 };
+
+// Achievement specifications
+const achievementSpecs = [
+  { id: "novice", title: "Novice Scholar", desc: "Complete your first quest!", icon: "🎓", check: () => getCompletedQuestsCount() >= 1 },
+  { id: "spark", title: "Productivity Spark", desc: "Complete 5 quests!", icon: "⚡", check: () => getCompletedQuestsCount() >= 5 },
+  { id: "streak_flame", title: "Streak Flame", desc: "Reach a 3-day active streak!", icon: "🔥", check: () => streak >= 3 },
+  { id: "focus_master", title: "Focus Master", desc: "Accumulate 60 minutes of study!", icon: "🧭", check: () => getCumulativeStudyMinutes() >= 60 },
+  { id: "quest_master", title: "Quest Master Elite", desc: "Complete 15 quests!", icon: "🏆", check: () => getCompletedQuestsCount() >= 15 },
+  { id: "champion", title: "Grand Champion", desc: "Reach Level 5!", icon: "👑", check: () => getLevelNumber() >= 5 }
+];
+
+// Focus milestones specifications
+const milestoneSpecs = [
+  { id: "30mins", title: "Focus Apprentice", desc: "Studied for 30 minutes cumulative!", minutes: 30, reward: 50 },
+  { id: "60mins", title: "Focus Elite", desc: "Studied for 60 minutes cumulative!", minutes: 60, reward: 100 },
+  { id: "120mins", title: "Focus Overlord", desc: "Studied for 120 minutes cumulative!", minutes: 120, reward: 200 }
+];
 
 // ==========================================================================
 // 1. DATA INITIALIZATION & LOCALSTORAGE MANAGEMENT
@@ -100,6 +119,8 @@ function loadData() {
   if (savedAnalytics) {
     try {
       analyticsData = JSON.parse(savedAnalytics);
+      if (!analyticsData.unlockedAchievements) analyticsData.unlockedAchievements = [];
+      if (!analyticsData.unlockedMilestones) analyticsData.unlockedMilestones = [];
     } catch (e) {
       initializeAnalyticsData();
     }
@@ -129,7 +150,9 @@ function initializeAnalyticsData() {
     },
     longestStreak: 8,
     currentStreak: 4,
-    lastActiveDate: getFormattedDate(new Date())
+    lastActiveDate: getFormattedDate(new Date()),
+    unlockedAchievements: ["novice"],
+    unlockedMilestones: ["30mins"]
   };
 
   // Seed study time and task completions for the last 15 days
@@ -176,8 +199,165 @@ function sendNotification(title, body) {
   }
 }
 
+// Helper evaluations for achievements
+function getCompletedQuestsCount() {
+  return tasks.filter(t => t.completed).length;
+}
+
+function getCumulativeStudyMinutes() {
+  return Object.values(analyticsData.dailyStudyMinutes).reduce((a, b) => a + b, 0);
+}
+
+function getLevelNumber() {
+  return Math.floor(xp / 300) + 1;
+}
+
 // ==========================================================================
-// 2. CORE TASK / QUESTS CONTROLLERS
+// 2. CONFETTI & OVERLAY POPUPS ENGINE
+// ==========================================================================
+
+// Pure, performant hardware-accelerated CSS particle Confetti
+function triggerConfetti() {
+  const container = document.getElementById("confettiContainer");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const colors = ["#a855f7", "#06b6d4", "#ec4899", "#3b82f6", "#f59e0b", "#10b981"];
+  const particleCount = 120;
+
+  for (let i = 0; i < particleCount; i++) {
+    const particle = document.createElement("div");
+    particle.className = "confetti-particle";
+
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const left = Math.random() * 100; // % viewport width
+    const delay = Math.random() * 2.5; // seconds
+    const duration = 2 + Math.random() * 2.5; // seconds
+    const size = 6 + Math.random() * 8; // px
+
+    particle.style.background = color;
+    particle.style.left = `${left}vw`;
+    particle.style.animationDelay = `${delay}s`;
+    particle.style.animationDuration = `${duration}s`;
+    particle.style.width = `${size}px`;
+    particle.style.height = `${size * 1.6}px`;
+    particle.style.transform = `rotate(${Math.random() * 360}deg)`;
+
+    container.appendChild(particle);
+  }
+  
+  // Clear elements after animation ends
+  setTimeout(() => {
+    container.innerHTML = "";
+  }, 5000);
+}
+
+// Trigger sliding Toast Alert when achievement is newly unlocked
+function triggerAchievementToast(achievementName) {
+  const toast = document.getElementById("achievementToast");
+  const toastName = document.getElementById("toastAchievementName");
+  if (!toast || !toastName) return;
+
+  toastName.textContent = achievementName;
+  toast.classList.add("show");
+  triggerConfetti();
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 4000);
+}
+
+// Check level ups dynamically on XP updates
+function checkLevelUp(oldXp, newXp) {
+  const oldLevel = Math.floor(oldXp / 300) + 1;
+  const newLevel = Math.floor(newXp / 300) + 1;
+
+  if (newLevel > oldLevel) {
+    // Open Level Up Dialog
+    const overlay = document.getElementById("levelUpPopupOverlay");
+    const popup = document.getElementById("levelUpPopup");
+    const levelText = document.getElementById("popupLevelText");
+
+    if (overlay && popup && levelText) {
+      levelText.textContent = `Level ${newLevel}`;
+      overlay.classList.add("active");
+      popup.classList.add("active");
+      triggerConfetti();
+
+      // Add rewards
+      coins += 50;
+      xp += 100; // Bonus XP
+      saveData();
+      updateGamification();
+    }
+  }
+}
+
+// Evaluation check of locked achievements
+function checkAchievements() {
+  let newlyUnlocked = false;
+
+  achievementSpecs.forEach(ach => {
+    if (!analyticsData.unlockedAchievements.includes(ach.id)) {
+      if (ach.check()) {
+        analyticsData.unlockedAchievements.push(ach.id);
+        triggerAchievementToast(ach.title);
+        newlyUnlocked = true;
+      }
+    }
+  });
+
+  if (newlyUnlocked) {
+    saveData();
+    renderAchievements();
+  }
+}
+
+// Evaluation check of cumulative study milestones
+function checkStudyMilestones() {
+  const cumulativeMins = getCumulativeStudyMinutes();
+
+  milestoneSpecs.forEach(mil => {
+    if (!analyticsData.unlockedMilestones.includes(mil.id)) {
+      if (cumulativeMins >= mil.minutes) {
+        analyticsData.unlockedMilestones.push(mil.id);
+        
+        // Open Milestone Dialog popup
+        const overlay = document.getElementById("milestonePopupOverlay");
+        const popup = document.getElementById("milestonePopup");
+        const title = document.getElementById("milestoneTitle");
+        const desc = document.getElementById("milestoneDesc");
+
+        if (overlay && popup && title && desc) {
+          title.textContent = mil.title;
+          desc.textContent = mil.desc;
+          overlay.classList.add("active");
+          popup.classList.add("active");
+          triggerConfetti();
+
+          // Add milestone reward
+          coins += mil.reward;
+          saveData();
+          updateGamification();
+        }
+      }
+    }
+  });
+}
+
+// Dismiss popup buttons click listeners
+document.getElementById("claimLevelBtn")?.addEventListener("click", () => {
+  document.getElementById("levelUpPopupOverlay").classList.remove("active");
+  document.getElementById("levelUpPopup").classList.remove("active");
+});
+
+document.getElementById("claimMilestoneBtn")?.addEventListener("click", () => {
+  document.getElementById("milestonePopupOverlay").classList.remove("active");
+  document.getElementById("milestonePopup").classList.remove("active");
+});
+
+// ==========================================================================
+// 3. CORE TASK / QUESTS CONTROLLERS
 // ==========================================================================
 
 function addTask() {
@@ -219,7 +399,7 @@ function renderTasks() {
     taskList.innerHTML = `
       <div class="empty-state">
         <i class="ri-ghost-2-line"></i>
-        <h3>No Tasks Yet</h3>
+        <h3>No Quests Yet</h3>
         <p>Add tasks and begin your productivity journey ✨</p>
       </div>
     `;
@@ -253,6 +433,7 @@ function renderTasks() {
     // Toggle Complete event
     const checkBtn = div.querySelector(".check-btn");
     const handleToggle = () => {
+      const oldXp = xp;
       task.completed = !task.completed;
       const todayStr = getFormattedDate(new Date());
 
@@ -282,6 +463,11 @@ function renderTasks() {
       saveData();
       updateGamification();
       renderTasks();
+      
+      // Evaluate newly unlocked gamifications
+      checkLevelUp(oldXp, xp);
+      checkAchievements();
+      renderWeeklyStreak();
     };
 
     checkBtn.addEventListener("click", handleToggle);
@@ -324,10 +510,19 @@ function updateStats() {
 function updateGamification() {
   points.textContent = coins;
   streakCount.textContent = streak;
-  xpText.textContent = `${xp} / 300 XP`;
+
+  // Level progression bar update
+  const level = getLevelNumber();
+  const currentLevelXp = xp % 300;
   
-  // XP cap/levelup indicator
-  const fillPercentage = Math.min(100, (xp / 3));
+  const xpLevelEl = document.getElementById("xpLevel");
+  if (xpLevelEl) {
+    xpLevelEl.textContent = `Level ${level}`;
+  }
+  
+  xpText.textContent = `${currentLevelXp} / 300 XP`;
+  
+  const fillPercentage = Math.min(100, (currentLevelXp / 3));
   xpFill.style.width = `${fillPercentage}%`;
 }
 
@@ -368,7 +563,7 @@ function escapeHtml(text) {
 }
 
 // ==========================================================================
-// 3. POMODORO TIMER & STUDY HOUR LOGGER
+// 4. POMODORO TIMER & STUDY HOUR LOGGER
 // ==========================================================================
 
 let studyTime = 25 * 60;
@@ -420,6 +615,10 @@ function startTimer() {
         currentTime = breakTime;
         document.getElementById("mode").innerText = "Break Time";
         document.getElementById("mode").style.color = "#22c55e";
+
+        // Evaluate milestone popups
+        checkStudyMilestones();
+        checkAchievements();
       } else {
         sendNotification("Break Over!", "Break over! Time to focus back on your tasks ⚔️");
         alert("Break over! Back to study.");
@@ -457,7 +656,7 @@ document.getElementById("pauseTimer")?.addEventListener("click", pauseTimer);
 document.getElementById("resetTimer")?.addEventListener("click", resetTimer);
 
 // ==========================================================================
-// 4. TAB & NAVIGATION ROUTERS
+// 5. TAB & NAVIGATION ROUTERS
 // ==========================================================================
 
 tabBtns.forEach(btn => {
@@ -500,7 +699,82 @@ document.querySelectorAll(".dock-btn").forEach(btn => {
 });
 
 // ==========================================================================
-// 5. CHART.JS ANALYTICS GENERATOR
+// 6. DYNAMIC ACHIEVEMENTS BADGES COMPILER
+// ==========================================================================
+
+function renderAchievements() {
+  const container = document.getElementById("badgesGrid");
+  if (!container) return;
+  container.innerHTML = "";
+
+  achievementSpecs.forEach(ach => {
+    const isUnlocked = analyticsData.unlockedAchievements.includes(ach.id);
+
+    const badgeDiv = document.createElement("div");
+    badgeDiv.classList.add("badge");
+    badgeDiv.classList.add(isUnlocked ? "unlocked" : "locked");
+
+    badgeDiv.textContent = ach.icon;
+
+    // Set custom tooltip
+    const tooltipText = isUnlocked 
+      ? `Unlocked: ${ach.title} (${ach.desc})`
+      : `Locked: ${ach.desc}`;
+    badgeDiv.setAttribute("data-tooltip", tooltipText);
+    badgeDiv.setAttribute("aria-label", tooltipText);
+
+    container.appendChild(badgeDiv);
+  });
+}
+
+// ==========================================================================
+// 7. WEEKLY STREAK TRACKER COMPILER
+// ==========================================================================
+
+function renderWeeklyStreak() {
+  const container = document.getElementById("streakDaysGrid");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const dayNames = ["M", "T", "W", "T", "F", "S", "S"];
+  const today = new Date();
+  
+  // Find Mon date of the current week
+  const currentDayOfWeek = today.getDay(); // 0 is Sun, 1-6 Mon-Sat
+  const diffToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
+  
+  const monday = new Date();
+  monday.setDate(today.getDate() + diffToMonday);
+
+  for (let i = 0; i < 7; i++) {
+    const loopDay = new Date(monday.getTime());
+    loopDay.setDate(monday.getDate() + i);
+    const dateStr = getFormattedDate(loopDay);
+
+    // Is active if completed a task or studied
+    const hasStudyMins = (analyticsData.dailyStudyMinutes[dateStr] || 0) > 0;
+    const hasCompletions = (analyticsData.completedTasksPerDay[dateStr] || 0) > 0;
+    const isActive = hasStudyMins || hasCompletions;
+
+    const cell = document.createElement("div");
+    cell.className = "streak-day-cell";
+    if (isActive) {
+      cell.classList.add("active");
+    }
+
+    cell.innerHTML = `
+      <span>${dayNames[i]}</span>
+      <div class="day-indicator">
+        ${isActive ? '<i class="ri-fire-fill"></i>' : '<i class="ri-checkbox-blank-circle-line"></i>'}
+      </div>
+    `;
+
+    container.appendChild(cell);
+  }
+}
+
+// ==========================================================================
+// 8. CHART.JS ANALYTICS GENERATOR
 // ==========================================================================
 
 function updateAnalyticsDashboard() {
@@ -662,7 +936,7 @@ document.getElementById("btnMonthlyStudy")?.addEventListener("click", () => {
 });
 
 // ==========================================================================
-// 6. GITHUB CONSISTENCY HEATMAP GENERATOR
+// 9. GITHUB CONSISTENCY HEATMAP GENERATOR
 // ==========================================================================
 
 function renderHeatmap() {
@@ -711,7 +985,7 @@ function renderHeatmap() {
 }
 
 // ==========================================================================
-// 7. QUEST MASTERY PROGRESS LIST
+// 10. QUEST MASTERY PROGRESS LIST
 // ==========================================================================
 
 function renderQuestMastery() {
@@ -747,7 +1021,7 @@ function renderQuestMastery() {
 }
 
 // ==========================================================================
-// 8. ADVANCED RESPONSIVENESS AND COLLAPSIBLE SIDEBAR MENU
+// 11. ADVANCED RESPONSIVENESS AND COLLAPSIBLE SIDEBAR MENU
 // ==========================================================================
 
 const sidebar = document.querySelector(".sidebar");
@@ -773,7 +1047,7 @@ if (mobileSidebarToggle) {
 sidebarOverlay.addEventListener("click", () => toggleSidebar(false));
 
 // ==========================================================================
-// 9. MOBILE FLOATING QUICK ADD Form Controllers
+// 12. MOBILE FLOATING QUICK ADD Form Controllers
 // ==========================================================================
 
 const mobileAddDrawer = document.getElementById("mobileAddDrawer");
@@ -836,7 +1110,7 @@ if (mobileAddTaskBtn) {
 }
 
 // ==========================================================================
-// 10. ACCESSIBILITY COMPLIANCE KEYBOARD SHORTCUTS
+// 13. ACCESSIBILITY COMPLIANCE KEYBOARD SHORTCUTS
 // ==========================================================================
 
 document.addEventListener("keydown", e => {
@@ -884,7 +1158,7 @@ document.addEventListener("keydown", e => {
 });
 
 // ==========================================================================
-// 11. INTERACTIVE SYSTEM WORKFLOWS
+// 14. INTERACTIVE SYSTEM INITIALIZATIONS
 // ==========================================================================
 
 // Filter Button routers
@@ -918,5 +1192,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadData();
   updateGamification();
   renderTasks();
+  renderAchievements();
+  renderWeeklyStreak();
   updateDisplay();
 });
