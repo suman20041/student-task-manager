@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Privacy Policy - Study Task Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,48 +39,36 @@
     </div>
   </header>
 
-<main class="container">
-  <p>
-    This Study Task Tracker is designed with privacy in mind.
-  </p>
+  <main class="container">
+    <section>
+      <h2>1. Information We Collect</h2>
+      <p>The Study Task Tracker is a local-first application. We do not collect or store any of your personal data on our servers. All task data is stored directly in your browser's <strong>localStorage</strong>.</p>
+    </section>
 
-  <div class="legal-tile glass-card">
-    <h2>Data Collection</h2>
-    <p>
-      We do not collect, store, or transmit any personal data.
-      All tasks are stored locally in your browser using local storage.
-    </p>
-  </div>
-  
-  <div class="legal-tile glass-card">
-    <h2>Data Usage</h2>
-    <p>
-      Your data stays on your device and is only used to display your tasks within the application.
-    </p>
-  </div>
+    <section style="margin-top: 2rem;">
+      <h2>2. How We Use Data</h2>
+      <p>Your task data is used solely to provide the task management features of this application. Since the data remains on your device, we have no access to your study schedules, priorities, or completion status.</p>
+    </section>
 
-  <div class="legal-tile glass-card">
-    <h2>Third Parties</h2>
-    <p>
-      This application does not use any third-party analytics, tracking, or advertising services.
-    </p>
-  </div>
+    <section style="margin-top: 2rem;">
+      <h2>3. Third-Party Services</h2>
+      <p>We use <strong>canvas-confetti</strong> for celebratory animations, which is loaded via a CDN. No tracking scripts or cookies are used by this application.</p>
+    </section>
 
-  <div class="legal-tile glass-card">
-    <h2>Changes</h2>
-    <p>
-      This privacy policy may be updated if new features are added.
-    </p>
-  </div>
+    <section style="margin-top: 2rem;">
+      <h2>4. Data Security</h2>
+      <p>Your data is as secure as your browser and device. Clearing your browser cache or site data will remove your tasks permanently.</p>
+    </section>
+  </main>
 
-  <p><a href="index.html">← Back to Home</a></p>
-</main>
+  <footer class="site-footer">
+    <p>&copy; 2026 Study Task Tracker. Your data, your device.</p>
+  </footer>
 
-<footer class="site-footer">
-  <p>&copy; 2026 Study Task Tracker | Made for students</p>
-</footer>
-
-<script src="script.js"></script>
-
+  <script>
+    // Keep theme consistent
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  </script>
 </body>
 </html>

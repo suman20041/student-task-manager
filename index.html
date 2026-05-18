@@ -1,335 +1,229 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Study Task Tracker</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title> Gamified Task Tracker</title>
+
+  <!-- Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
+
 <body>
-  <div class="app-layout">
-    <!-- Navigation Sidebar -->
-    <nav class="app-sidebar" id="appSidebar">
-      <div class="sidebar-brand">
-        <span class="logo-icon">🚀</span>
-        <span class="brand-text">TaskMaster</span>
-      </div>
-      <ul class="nav-links">
-        <li class="active"><a href="#"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a></li>
-        <li><a href="#workspace-title"><span class="nav-icon">✅</span><span class="nav-text">Tasks</span></a></li>
-        <li><a href="#timerDisplay"><span class="nav-icon">⏱️</span><span class="nav-text">Focus</span></a></li>
-      </ul>
-    </nav>
 
-    <div class="app-main-wrapper">
-      <a class="skip-link" href="#main-content">Skip to main content</a>
-      <header class="site-header">
-    <div class="header-inner">
-      <div class="header-brand">
-        <h1>📚 Study Task Tracker</h1>
-        <p class="header-subtitle">
-          <span id="headerGreeting">👋 Focus Time!</span>
-          <span class="subtitle-divider">•</span>
-          <span id="headerDate">Sun, May 17</span>
-        </p>
-      </div>
-      <div class="header-controls">
-        <div class="stats-pill">
-          <span class="stats-pill-label">Progress</span>
-          <span id="headerStats" class="stats-pill-value">🎯 0%</span>
+  <!-- BACKGROUND -->
+  <div class="bg blur1"></div>
+  <div class="bg blur2"></div>
+  <div class="grid-overlay"></div>
+
+  <main class="container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+      <div class="logo-box">
+        <div class="logo">
+          <i class="ri-gamepad-line"></i>
         </div>
-      </div>
-    </div>
-  </header>
 
-  <main id="main-content" class="container">
-    
-    <!-- Bento Stats Grid (Phase 2) -->
-    <div class="bento-stats-grid">
-      <div class="bento-stat-card"><div class="stat-icon">✅</div><div class="stat-info"><h4>Tasks Completed</h4><h2 id="bentoTasksCount">0</h2></div></div>
-      <div class="bento-stat-card"><div class="stat-icon">⚡</div><div class="stat-info"><h4>Productivity Score</h4><h2 id="bentoProdScore">0</h2></div></div>
-      <div class="bento-stat-card"><div class="stat-icon">⏱️</div><div class="stat-info"><h4>Focus Hours</h4><h2 id="bentoFocusHours">0.0</h2></div></div>
-      <div class="bento-stat-card"><div class="stat-icon">🔥</div><div class="stat-info"><h4>Current Streak</h4><h2 id="bentoStreak">0</h2></div></div>
-    </div>
-
-    <div class="dashboard-grid">
-      <!-- Left Column: Workspace & Quotes Stack -->
-      <div class="workspace-col" style="display: flex; flex-direction: column; gap: 1.75rem;">
-        <!-- Workspace Card -->
-        <section class="workspace-card glass-card" aria-labelledby="workspace-title">
-          <h2 id="workspace-title" class="sr-only">Study Workspace</h2>
-          
-          <form id="taskForm" onsubmit="event.preventDefault(); addTask();">
-            <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-              <label for="taskInput">Task Title</label>
-              <input type="text" id="taskInput" placeholder="What are you studying today?" aria-describedby="taskHelp" required>
-            </div>
-            
-            <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-              <label for="taskDescInput">Task Description (Optional)</label>
-              <textarea id="taskDescInput" placeholder="Enter details, links, or notes..."></textarea>
-            </div>
-            
-            <div class="form-row">
-              <select id="priorityInput" aria-label="Task Priority">
-                <option value="low">Low Priority</option>
-                <option value="medium">Medium Priority</option>
-                <option value="high">High Priority</option>
-              </select>
-              <select id="categoryInput" aria-label="Task Category">
-                <option value="general">🌟 General</option>
-                <option value="reading">📚 Reading</option>
-                <option value="homework">✍️ Homework</option>
-                <option value="examprep">🔬 Exam Prep</option>
-                <option value="project">🎨 Project</option>
-              </select>
-              <input type="date" id="dueDateInput" aria-label="Due Date">
-            </div>
-
-            <div class="form-actions-row">
-              <button type="submit" class="btn-add">Add Task</button>
-              <button type="button" id="clearAllBtn" class="btn-clear">Clear All</button>
-            </div>
-            <p id="taskHelp" class="sr-only">Enter a task and press Add to track your study items.</p>
-          </form>
-          
-          <!-- Category Filter Tag Pill Bar -->
-          <div class="category-filters-container">
-            <span class="filters-label">Filter:</span>
-            <div id="categoryFilters" class="filter-pills">
-              <button class="filter-pill active" onclick="filterCategory('all')">All</button>
-              <button class="filter-pill" onclick="filterCategory('general')">🌟 General</button>
-              <button class="filter-pill" onclick="filterCategory('reading')">📚 Reading</button>
-              <button class="filter-pill" onclick="filterCategory('homework')">✍️ Homework</button>
-              <button class="filter-pill" onclick="filterCategory('examprep')">🔬 Exam Prep</button>
-              <button class="filter-pill" onclick="filterCategory('project')">🎨 Project</button>
-            </div>
-          </div>
-
-          <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Search tasks..." aria-label="Search tasks">
-          </div>
-
-          <p class="error" id="errorMsg" aria-live="assertive"></p>
-          
-          <!-- Task Progress bar pill -->
-          <div class="task-progress-wrapper" style="margin-top: 1.5rem;">
-            <div class="progress-bar-container" style="background: var(--border-color); height: 8px; border-radius: 9999px; overflow: hidden; position: relative;">
-              <div id="taskProgressBar" class="progress-bar-fill" style="background: var(--accent-color); width: 0%; height: 100%; transition: width 0.4s ease;"></div>
-            </div>
-            <div class="task-progress-status" style="display: flex; justify-content: flex-end; align-items: center; gap: 0.35rem; margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700; color: var(--text-color);">
-              <span id="taskProgressPercent">✅ 0 / 0 completed</span>
-            </div>
-          </div>
-
-          <ul id="taskList" role="list"></ul>
-        </section>
-
-        <!-- Motivational Quotes Section (in a separate div below Workspace Card!) -->
-        <div class="quotes-workspace-row">
-          <!-- Mindset & Grit Card -->
-          <div class="glass-card inspiration-card grit-card" style="margin: 0;">
-            <h2 class="sidebar-card-title">🔥 Mindset & Grit</h2>
-            <div class="quote-container">
-              <p id="gritQuoteText" class="quote-text">"It always seems impossible until it's done."</p>
-              <p id="gritQuoteAuthor" class="quote-author">— Nelson Mandela</p>
-            </div>
-            <button id="newGritQuoteBtn" class="quote-btn">✨ New Grit</button>
-          </div>
-
-          <!-- Consistency & Habit Card -->
-          <div class="glass-card inspiration-card habit-card" style="margin: 0;">
-            <h2 class="sidebar-card-title">⚡ Consistency & Habit</h2>
-            <div class="quote-container">
-              <p id="habitQuoteText" class="quote-text">"We are what we repeatedly do. Excellence, then, is not an act, but a habit."</p>
-              <p id="habitQuoteAuthor" class="quote-author">— Aristotle</p>
-            </div>
-            <button id="newHabitQuoteBtn" class="quote-btn">✨ New Habit</button>
-          </div>
+        <div>
+          <h1>Gamified Task Tracker</h1>
+          <p>Level Up Your Productivity</p>
         </div>
       </div>
 
-      <!-- Right Column: Focus Sidebar -->
-      <aside class="sidebar-col">
-        <!-- Pomodoro Focus Timer Card -->
-        <div class="glass-card pomodoro-card">
-          <h2 class="sidebar-card-title">⏱️ Focus Timer</h2>
-          <div class="pomodoro-modes">
-            <button id="pomodoroModeBtn" class="mode-btn active" data-mode="study">Study</button>
-            <button id="shortBreakModeBtn" class="mode-btn" data-mode="short">Short Break</button>
-            <button id="longBreakModeBtn" class="mode-btn" data-mode="long">Long Break</button>
-          </div>
-          <div class="pomodoro-timer-display">
-            <div class="timer-svg-container">
-              <svg width="160" height="160" viewBox="0 0 160 160">
-                <circle cx="80" cy="80" r="75" class="timer-bg"></circle>
-                <circle cx="80" cy="80" r="75" class="timer-progress" id="timerProgressRing"></circle>
-              </svg>
-              <div class="timer-time-overlay">
-                <span id="timerDisplay">25:00</span>
-              </div>
-            </div>
-          </div>
-          <div class="pomodoro-controls">
-            <button id="startPauseBtn" class="timer-btn primary-btn">▶️ Start</button>
-            <button id="resetTimerBtn" class="timer-btn secondary-btn">🔁 Reset</button>
-          </div>
+      <!-- USER CARD -->
+      <div class="profile-card">
+
+        <div class="avatar">
+          <i class="ri-user-3-fill"></i>
         </div>
 
-        <!-- Inspiration Quotes Card -->
-        <div class="glass-card inspiration-card">
-          <h2 class="sidebar-card-title">💡 Study Inspiration</h2>
-          <div class="quote-container">
-            <p id="quoteText" class="quote-text">"Focus on being productive, not busy."</p>
-            <p id="quoteAuthor" class="quote-author">— Tim Ferriss</p>
-          </div>
-          <button id="newQuoteBtn" class="quote-btn">✨ New Inspiration</button>
-        </div>
+        <h2>Student Hero</h2>
 
-        <!-- Sidebar Card Row (New components side-by-side) -->
-        <div class="sidebar-card-row">
-          <!-- Daily Study Goal Tracker Card -->
-          <div class="glass-card goal-card">
-            <div class="goal-header">
-              <h2 class="sidebar-card-title">🎯 Goal</h2>
-              <div class="streak-badge" id="streakBadge" title="Your consecutive days study streak!">
-                🔥 <span id="streakCount">0</span> days
-              </div>
-            </div>
-            <div class="xp-level-container" style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 1rem 0; background: rgba(255,255,255,0.03); padding: 0.5rem 0.75rem; border-radius: 12px; border: 1px solid var(--border-color);">
-              <span id="playerLevel" style="font-weight: 800; font-family: 'Outfit'; font-size: 0.85rem; color: var(--accent-color);">LVL 1</span>
-              <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.05); margin: 0 0.75rem; border-radius: 999px; overflow: hidden; position: relative;">
-                <div id="playerXpBar" style="width: 0%; height: 100%; background: var(--primary-gradient); transition: width 0.5s ease; border-radius: 999px;"></div>
-              </div>
-              <span id="playerXpText" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; white-space: nowrap;">0 / 100 XP</span>
-            </div>
-            <div class="goal-progress-section">
-              <div class="circular-progress">
-                <svg class="progress-ring" width="120" height="120">
-                  <circle class="progress-ring-bg" stroke="var(--border-color)" stroke-width="8" fill="transparent" r="50" cx="60" cy="60" />
-                  <circle class="progress-ring-bar" id="progressRingBar" stroke="var(--accent-color)" stroke-width="8" fill="transparent" r="50" cx="60" cy="60" />
-                </svg>
-                <div class="progress-text-container">
-                  <span id="goalPercent">0%</span>
-                  <small id="goalMinutesRatio">0 / 60m</small>
-                </div>
-              </div>
-            </div>
-            <div class="goal-controls-row">
-              <button id="add15m" class="btn-goal-adjust">+15m</button>
-              <button id="add30m" class="btn-goal-adjust">+30m</button>
-              <button id="add60m" class="btn-goal-adjust">+60m</button>
-              <button id="resetGoal" class="btn-goal-adjust reset-goal-btn" title="Reset today's progress">🔁</button>
-            </div>
-            <div class="goal-target-setting">
-              <label for="goalTargetInput">Daily Target:</label>
-              <div class="target-input-wrapper">
-                <input type="number" id="goalTargetInput" value="60" min="5" max="480" step="5" aria-label="Daily target in minutes">
-                <span>mins</span>
-              </div>
-            </div>
+        <p>Focus Warrior ⚔️</p>
+
+        <div class="xp-container">
+          <div class="xp-info">
+            <span>Level 3</span>
+            <span id="xpText">120 / 300 XP</span>
           </div>
 
-          <!-- Quick Notes & Brain Dump Pad Card -->
-          <div class="glass-card notes-card">
-            <h2 class="sidebar-card-title">📝 Notes</h2>
-            <div class="notes-body">
-              <textarea id="quickNotesArea" placeholder="Jot down quick thoughts, formulas, or reminders..." aria-label="Quick notes workspace"></textarea>
-              <div class="notes-metadata">
-                <span id="notesWordCount">0 words</span>
-                <span id="notesCharCount">0 chars</span>
-              </div>
-              <div class="notes-actions">
-                <button id="copyNotesBtn" class="notes-action-btn" title="Copy notes to clipboard">📋 Copy Note</button>
-                <button id="clearNotesBtn" class="notes-action-btn danger-notes-btn" title="Clear all notes">🧹 Clear</button>
-              </div>
-              <div class="notes-toast" id="notesToast" aria-live="polite">Note copied to clipboard! 👍</div>
-            </div>
+          <div class="xp-bar">
+            <div class="xp-fill" id="xpFill"></div>
           </div>
-        </div>
-      </aside>
-    </div>
-  </main>
 
-  <footer class="site-footer">
-    <nav aria-label="Footer navigation">
-      <a href="#taskInput">Add task</a>
-      <a href="#taskList">View tasks</a>
-      <a href="#main-content">Back to top</a>
-      <a href="privacy.html">Privacy Policy</a>
-      <a href="terms.html">Terms of Service</a>
-    </nav>
-    <p>Accessible study tracking with keyboard support and semantic structure.</p>
-    <p>&copy; 2026 Study Task Tracker</p>
-  </footer>
-  <button class="fab-add-task" onclick="document.getElementById('taskInput').focus()" aria-label="Add new task">
-    <span style="font-size: 1.5rem; line-height: 1;">+</span>
-  </button>
-    </div> <!-- End app-main-wrapper -->
-  </div> <!-- End app-layout -->
-
-  <!-- Floating Command Palette (Phase 5) -->
-  <div id="commandPalette" class="command-palette-overlay" aria-hidden="true">
-    <div class="command-palette-container glass-card">
-      <div class="palette-search-wrapper">
-        <span class="palette-search-icon">🔍</span>
-        <input type="text" id="paletteSearchInput" placeholder="Type a command or search..." aria-label="Command palette input">
-        <kbd class="palette-esc-kbd">ESC</kbd>
       </div>
-      <ul class="palette-results" id="paletteResults">
-        <li class="palette-item active" data-action="addTask">
-          <span class="item-icon">➕</span>
-          <span class="item-text">Add a new task...</span>
-          <kbd class="item-shortcut">N</kbd>
-        </li>
-        <li class="palette-item" data-action="startStudy">
-          <span class="item-icon">⏱️</span>
-          <span class="item-text">Start Focus study session</span>
-          <kbd class="item-shortcut">F</kbd>
-        </li>
-        <li class="palette-item" data-action="startShort">
-          <span class="item-icon">☕</span>
-          <span class="item-text">Start Short break</span>
-          <kbd class="item-shortcut">S</kbd>
-        </li>
-        <li class="palette-item" data-action="startLong">
-          <span class="item-icon">🥤</span>
-          <span class="item-text">Start Long break</span>
-          <kbd class="item-shortcut">L</kbd>
-        </li>
-        <li class="palette-item" data-action="focusNotes">
-          <span class="item-icon">📝</span>
-          <span class="item-text">Focus Quick Notes dump pad</span>
-          <kbd class="item-shortcut">O</kbd>
-        </li>
-        <li class="palette-item" data-action="clearTasks">
-          <span class="item-icon">🧹</span>
-          <span class="item-text">Clear all completed tasks</span>
-          <kbd class="item-shortcut">C</kbd>
-        </li>
-        <li class="palette-item" data-action="filterStudy">
-          <span class="item-icon">📚</span>
-          <span class="item-text">Filter: Category "Study"</span>
-        </li>
-        <li class="palette-item" data-action="filterPersonal">
-          <span class="item-icon">💬</span>
-          <span class="item-text">Filter: Category "Personal"</span>
-        </li>
-        <li class="palette-item" data-action="filterWork">
-          <span class="item-icon">🏆</span>
-          <span class="item-text">Filter: Category "Work"</span>
-        </li>
-      </ul>
-      <div class="palette-footer">
-        <span>Use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, <kbd>Enter</kbd> to select, <kbd>Esc</kbd> to dismiss.</span>
+
+      <!-- STATS -->
+      <div class="stats-grid">
+
+        <div class="stat-card">
+          <i class="ri-file-list-3-line"></i>
+          <h3 id="totalTasks">0</h3>
+          <p>Total Tasks</p>
+        </div>
+
+        <div class="stat-card">
+          <i class="ri-checkbox-circle-line"></i>
+          <h3 id="completedTasks">0</h3>
+          <p>Completed</p>
+        </div>
+
+        <div class="stat-card">
+          <i class="ri-fire-fill"></i>
+          <h3 id="streakCount">0</h3>
+          <p>Day Streak</p>
+        </div>
+
+        <div class="stat-card">
+          <i class="ri-star-smile-fill"></i>
+          <h3 id="points">0</h3>
+          <p>Coins</p>
+        </div>
+
       </div>
-    </div>
+
+      <!-- BADGES -->
+      <div class="badges-card">
+
+        <div class="card-title">
+          <i class="ri-medal-fill"></i>
+          <span>Achievements</span>
+        </div>
+
+        <div class="badges">
+
+          <div class="badge unlocked">
+            🥇
+          </div>
+
+          <div class="badge unlocked">
+            🔥
+          </div>
+
+          <div class="badge">
+            🚀
+          </div>
+
+          <div class="badge">
+            👑
+          </div>
+
+        </div>
+
+      </div>
+
+    </aside>
+
+    <!-- MAIN -->
+    <section class="main-content">
+
+      <!-- TOP -->
+      <div class="topbar">
+
+        <div>
+          <h2>Dashboard</h2>
+          <p>Complete tasks and earn rewards ✨</p>
+        </div>
+
+        <button id="themeToggle">
+          <i class="ri-moon-clear-fill"></i>
+        </button>
+
+      </div>
+
+      <!-- ADD TASK -->
+      <div class="task-box">
+
+        <input
+          type="text"
+          id="taskInput"
+          placeholder="Enter your next task..."
+        />
+
+        <select id="categorySelect">
+          <option value="Theory">📘 Theory</option>
+          <option value="Practical">🧪 Practical</option>
+          <option value="Assignment">📝 Assignment</option>
+          <option value="Revision">📖 Revision</option>
+        </select>
+
+        <button id="addTaskBtn">
+          <i class="ri-add-line"></i>Add Task</button>
+
+      </div>
+
+      <!-- FILTERS -->
+      <div class="filters">
+
+        <button class="filter-btn active" data-filter="All">
+          All
+        </button>
+
+        <button class="filter-btn" data-filter="Theory">
+          Theory
+        </button>
+
+        <button class="filter-btn" data-filter="Practical">
+          Practical
+        </button>
+
+        <button class="filter-btn" data-filter="Assignment">
+          Assignment
+        </button>
+
+        <button class="filter-btn" data-filter="Revision">
+          Revision
+        </button>
+
+      </div>
+
+      <!-- TASKS -->
+      <div class="task-list" id="taskList">
+
+        <div class="empty-state">
+
+          <i class="ri-ghost-2-line"></i>
+
+          <h3>No Tasks Yet</h3>
+
+          <p>
+            Add tasks and start your productivity adventure.
+          </p>
+
+        </div>
+
+      </div>
+
+    </section>
+    <div class="study-mode">
+
+  <h2 id="mode">Study Time</h2>
+
+  <div class="timer" id="timer">
+    25:00
   </div>
 
+  <div class="buttons">
+  <button onclick="startTimer()"><i class="fa-solid fa-play"></i> Start</button>
+  <button onclick="pauseTimer()"><i class="fa-solid fa-pause"></i> Pause</button>
+  <button onclick="resetTimer()"><i class="fa-solid fa-rotate-right"></i> Reset</button>
+</div>
+
+
+</div>
+
+  </main>
+
+  </main>
+
   <script src="script.js"></script>
+
 </body>
 </html>
