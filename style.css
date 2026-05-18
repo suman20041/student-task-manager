@@ -2,6 +2,121 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+
+:root, [data-theme="dark"] {
+  --bg-color: #0f172a;
+  --text-color: #e2e8f0;
+  --text-muted: #94a3b8;
+  --card-bg: rgba(30, 41, 59, 0.6);
+  --border-color: #334155;
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+  --input-bg: rgba(30, 41, 59, 0.4);
+  --header-grad: linear-gradient(135deg, #1e293b, #0f172a);
+}
+
+[data-theme="light"] {
+  --bg-color: #f8fafc;
+  --text-color: #1e293b;
+  --text-muted: #64748b;
+  --card-bg: #ffffff;
+  --border-color: #e2e8f0;
+  --accent-color: #2563eb;
+  --accent-hover: #1d4ed8;
+  --input-bg: #ffffff;
+  --header-grad: linear-gradient(135deg, #e2e8f0, #f8fafc);
+}
+
+[data-theme="blue"] {
+  --bg-color: #e0f2fe;
+  --text-color: #0369a1;
+  --text-muted: #0c4a6e;
+  --card-bg: #bae6fd;
+  --border-color: #7dd3fc;
+  --accent-color: #0284c7;
+  --accent-hover: #0369a1;
+  --input-bg: #f0f9ff;
+  --header-grad: linear-gradient(135deg, #7dd3fc, #e0f2fe);
+}
+
+[data-theme="pastel"] {
+  --bg-color: #fdf2f8;
+  --text-color: #701a75;
+  --text-muted: #86198f;
+  --card-bg: #fce7f3;
+  --border-color: #fbcfe8;
+  --accent-color: #db2777;
+  --accent-hover: #be185d;
+  --input-bg: #fff1f2;
+  --header-grad: linear-gradient(135deg, #fbcfe8, #fdf2f8);
+}
+
+/* Apply variables */
+body {
+  background: var(--bg-color);
+  color: var(--text-color);
+  transition: background 0.3s, color 0.3s;
+}
+
+.site-header {
+  background: var(--header-grad);
+  border-color: var(--border-color);
+}
+
+.container {
+  background: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+input, select {
+  background: var(--input-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+li {
+  background: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+.site-footer {
+  background: var(--card-bg) !important;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2rem 1rem;
+  margin-top: 4rem;
+}
+
+.theme-dropdown {
+  background: var(--input-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+.search-container input {
+  background: var(--input-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+.celebration {
+  text-align: center;
+  margin-top: 20px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.5s ease;
+}
+
+.celebration.show {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.hidden {
+  display: none;
 }
 
 :root {
