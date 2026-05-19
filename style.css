@@ -1335,7 +1335,6 @@ body.light .topbar-left h2 {
 
 .deadline-alert.warning i {
   color: #f59e0b;
-=======
 }
 
 .pomodoro-card:hover::before {
@@ -1555,7 +1554,6 @@ body.light .topbar-left h2 {
   color: var(--text-light);
   font-size: 14px;
   line-height: 1.5;
-=======
   justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
@@ -4623,7 +4621,6 @@ body.light .drag-handle:hover {
 .search-box input::placeholder {
   color: var(--text-light);
   opacity: 0.6;
-=======
 /* ==========================================================================
    PHASE 11: PROFILE CARD & EDIT MODAL STYLING
    ========================================================================== */
