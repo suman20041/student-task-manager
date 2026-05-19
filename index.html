@@ -131,6 +131,7 @@
     <section class="main-content">
 
 
+
       <!-- TOP BAR -->
       <div class="topbar">
 
@@ -154,6 +155,19 @@
           <h2>Dashboard</h2>
           <p>Conquer your goals one task at a time ✨</p>
         </div>
+
+      <!-- TOP BAR -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="burger-btn" id="mobileSidebarToggle" aria-label="Toggle Sidebar Menu">
+            <i class="ri-menu-line"></i>
+          </button>
+          <div>
+            <h2>Dashboard</h2>
+            <p>Conquer your goals one task at a time ✨</p>
+          </div>
+        </div>
+
         <div class="topbar-right">
           <div class="theme-selector-panel">
             <button class="theme-dot active" data-theme="cosmic" aria-label="Cosmic Theme" style="background: linear-gradient(135deg, #a855f7, #06b6d4);"></button>
@@ -165,17 +179,22 @@
       </div>
 
       <!-- TAB NAVIGATION -->
+
       <div class="nav-tabs">
         <button class="tab-btn active" data-tab="quests">
+
+      <div class="nav-tabs" role="tablist">
+        <button class="tab-btn active" id="tabBtnQuests" data-tab="quests" role="tab" aria-selected="true" aria-controls="quests-tab">
+
           <i class="ri-checkbox-multiple-line"></i> Quests & Workspace
         </button>
-        <button class="tab-btn" data-tab="analytics">
+        <button class="tab-btn" id="tabBtnAnalytics" data-tab="analytics" role="tab" aria-selected="false" aria-controls="analytics-tab">
           <i class="ri-bar-chart-2-line"></i> Analytics Hub
         </button>
       </div>
 
       <!-- TAB 1: QUESTS & TIMER -->
-      <div id="quests-tab" class="tab-content active">
+      <div id="quests-tab" class="tab-content active" role="tabpanel" aria-labelledby="tabBtnQuests">
         <div class="workspace-layout">
           <!-- Tasks Work area -->
           <div class="workspace-main">
@@ -192,6 +211,7 @@
                 <option value="Assignment">📝 Assignment</option>
                 <option value="Revision">📖 Revision</option>
               </select>
+
               <input
                 type="datetime-local"
                 id="deadlineInput"
@@ -199,6 +219,25 @@
               />
               <button id="addTaskBtn">
                 <i class="ri-add-line"></i> Add Task
+
+              <select id="prioritySelect" aria-label="Task priority">
+                <option value="High">🔴 High</option>
+                <option value="Medium" selected>🟡 Medium</option>
+                <option value="Low">🟢 Low</option>
+              </select>
+              <button id="addTaskBtn">
+                <i class="ri-add-line"></i> Add Task
+              </button>
+            </div>
+
+            <!-- VIEW TOGGLES -->
+            <div class="view-toggles">
+              <button class="view-btn active" id="listViewBtn" aria-label="Show list view">
+                <i class="ri-list-check"></i> List View
+              </button>
+              <button class="view-btn" id="boardViewBtn" aria-label="Show Kanban board view">
+                <i class="ri-kanban-view"></i> Kanban Board
+
               </button>
             </div>
 
@@ -209,6 +248,7 @@
               <button class="filter-btn" data-filter="Practical">🧪 Practical</button>
               <button class="filter-btn" data-filter="Assignment">📝 Assignment</button>
               <button class="filter-btn" data-filter="Revision">📖 Revision</button>
+
               <button class="filter-btn" id="sortByDeadline" title="Sort by earliest deadline">
                 <i class="ri-time-line"></i> Due Soon
               </button>
@@ -216,6 +256,10 @@
 
             <!-- DEADLINE ALERTS -->
             <div class="deadline-alerts" id="deadlineAlerts"></div>
+
+
+            </div>
+
 
             <!-- DAILY QUEST -->
             <div class="daily-quest">
@@ -229,11 +273,17 @@
             </div>
 
             <!-- TASKS -->
-            <div class="task-list" id="taskList">
-              <div class="empty-state">
-                <i class="ri-ghost-2-line"></i>
-                <h3>No Tasks Yet</h3>
-                <p>Add tasks and start your productivity adventure.</p>
+            <div class="task-list-wrapper">
+              <div class="task-list" id="taskList">
+                <div class="empty-state">
+                  <i class="ri-ghost-2-line"></i>
+                  <h3>No Tasks Yet</h3>
+                  <p>Add tasks and start your productivity adventure.</p>
+                </div>
+              </div>
+
+              <div class="board-columns" id="boardColumns" style="display: none;">
+                <!-- Populate columns dynamically in JS -->
               </div>
             </div>
           </div>
@@ -252,15 +302,22 @@
           </div>
         </div>
       </div>
+
       <div id="analytics-tab" class="tab-content hidden">
+
+      <div id="analytics-tab" class="tab-content hidden" role="tabpanel" aria-labelledby="tabBtnAnalytics">
+
         <!-- Stats summary row -->
         <div class="analytics-stats-grid">
           <div class="analytics-stat-card glass">
             <div class="stat-icon-wrapper blue">
               <i class="ri-time-line"></i>
             </div>
-            <div class="stat-info">
-              <h3 id="analyticsTotalHours">0.0h</h3>
+            <div class="stat-info" style="width: 100%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <h3 id="analyticsTotalHours">0.0h</h3>
+                <span class="trend-pill positive"><i class="ri-arrow-up-line"></i> +12%</span>
+              </div>
               <p>Total Study Time</p>
             </div>
           </div>
@@ -269,8 +326,11 @@
             <div class="stat-icon-wrapper green">
               <i class="ri-checkbox-circle-fill"></i>
             </div>
-            <div class="stat-info">
-              <h3 id="analyticsCompletedQuests">0</h3>
+            <div class="stat-info" style="width: 100%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <h3 id="analyticsCompletedQuests">0</h3>
+                <span class="trend-pill positive"><i class="ri-arrow-up-line"></i> +8%</span>
+              </div>
               <p>Completed Quests</p>
             </div>
           </div>
@@ -279,8 +339,11 @@
             <div class="stat-icon-wrapper orange">
               <i class="ri-fire-fill"></i>
             </div>
-            <div class="stat-info">
-              <h3 id="analyticsStreak">0 days</h3>
+            <div class="stat-info" style="width: 100%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <h3 id="analyticsStreak">0 days</h3>
+                <span class="trend-pill neutral">Steady</span>
+              </div>
               <p>Active Streak</p>
             </div>
           </div>
@@ -289,8 +352,11 @@
             <div class="stat-icon-wrapper purple">
               <i class="ri-percent-line"></i>
             </div>
-            <div class="stat-info">
-              <h3 id="analyticsCompletionRate">0%</h3>
+            <div class="stat-info" style="width: 100%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <h3 id="analyticsCompletionRate">0%</h3>
+                <span class="trend-pill positive"><i class="ri-arrow-up-line"></i> +3%</span>
+              </div>
               <p>Completion Rate</p>
             </div>
           </div>
@@ -328,11 +394,32 @@
               <canvas id="categoryChart"></canvas>
             </div>
           </div>
+
+          <!-- Chart 3: Quest Completion Trend -->
+          <div class="chart-card glass full-width">
+            <div class="chart-header">
+              <div class="header-left">
+                <i class="ri-line-chart-fill"></i>
+                <h3>Quest Completion Trend</h3>
+              </div>
+              <div class="chart-toggle-group">
+                <button class="toggle-btn active" id="btnWeeklyTrend">Weekly</button>
+                <button class="toggle-btn" id="btnMonthlyTrend">Monthly</button>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="completionTrendChart"></canvas>
+            </div>
+          </div>
         </div>
+
 
 
       <!-- TAB 2: ANALYTICS HUB -->
       <div id="analytics-tab" class="tab-content hidden">
+
+        <!-- Consistency Heatmap & Mastery Progress List -->
+ 
         <div class="analytics-heatmap-layout">
           <!-- Github style Heatmap -->
           <div class="chart-card glass heatmap-card">
@@ -372,6 +459,55 @@
             </div>
           </div>
         </div>
+
+        <!-- Insights & History Grid -->
+        <div class="analytics-insights-history-grid">
+          <!-- Card 1: Productivity Highlights -->
+          <div class="chart-card glass insights-card">
+            <div class="chart-header">
+              <div class="header-left">
+                <i class="ri-lightbulb-flash-fill"></i>
+                <h3>Productivity Highlights</h3>
+              </div>
+            </div>
+            <div class="insights-content">
+              <div class="insight-item">
+                <div class="insight-label-icon">
+                  <i class="ri-calendar-check-line"></i>
+                  <span>Most Productive Day</span>
+                </div>
+                <div class="insight-value" id="mostProductiveDay">Wednesday</div>
+              </div>
+              <div class="insight-item">
+                <div class="insight-label-icon">
+                  <i class="ri-time-line"></i>
+                  <span>Peak Focus Hour</span>
+                </div>
+                <div class="insight-value" id="peakFocusHour">2 PM - 4 PM</div>
+              </div>
+              <div class="insight-item">
+                <div class="insight-label-icon">
+                  <i class="ri-shield-flash-line"></i>
+                  <span>Longest Focus Streak</span>
+                </div>
+                <div class="insight-value" id="longestFocusStreak">8 days</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Focus Session History -->
+          <div class="chart-card glass history-card">
+            <div class="chart-header">
+              <div class="header-left">
+                <i class="ri-history-line"></i>
+                <h3>Focus Session History</h3>
+              </div>
+            </div>
+            <div class="history-list" id="focusHistoryList">
+              <!-- Populated dynamically by JS -->
+            </div>
+          </div>
+        </div>
       </div>
 
     </section>
@@ -380,8 +516,8 @@
   </main>
 
   <!-- MOBILE BOTTOM NAVIGATION DOCK -->
-  <div class="mobile-bottom-dock glass">
-    <button class="dock-btn active" data-tab="quests" aria-label="Open Quests workspace">
+  <div class="mobile-bottom-dock glass" role="tablist">
+    <button class="dock-btn active" id="dockBtnQuests" data-tab="quests" role="tab" aria-selected="true" aria-controls="quests-tab" aria-label="Open Quests workspace">
       <i class="ri-checkbox-multiple-line"></i>
       <span>Quests</span>
     </button>
@@ -390,7 +526,7 @@
       <i class="ri-add-line"></i>
     </button>
     
-    <button class="dock-btn" data-tab="analytics" aria-label="Open Stats dashboard">
+    <button class="dock-btn" id="dockBtnAnalytics" data-tab="analytics" role="tab" aria-selected="false" aria-controls="analytics-tab" aria-label="Open Stats dashboard">
       <i class="ri-bar-chart-2-line"></i>
       <span>Stats</span>
     </button>
@@ -418,6 +554,12 @@
         <option value="Practical">🧪 Practical</option>
         <option value="Assignment">📝 Assignment</option>
         <option value="Revision">📖 Revision</option>
+      </select>
+
+      <select id="mobilePrioritySelect" aria-label="Task priority">
+        <option value="High">🔴 High Priority</option>
+        <option value="Medium" selected>🟡 Medium Priority</option>
+        <option value="Low">🟢 Low Priority</option>
       </select>
 
       <button id="mobileAddTaskBtn">
@@ -467,6 +609,43 @@
   </div>
 
 
+
+  <!-- ACHIEVEMENT DETAILS MODAL -->
+  <div class="popup-overlay" id="achievementModalOverlay"></div>
+  <div class="popup-card glass achievement-details-card" id="achievementModal">
+    <button class="close-modal-btn" id="closeAchievementModalBtn" aria-label="Close modal"><i class="ri-close-line"></i></button>
+    <div class="modal-glow" id="modalGlow"></div>
+    <div class="modal-badge-wrapper">
+      <div class="modal-badge" id="modalBadgeIcon">🎓</div>
+      <div class="modal-rarity-pill" id="modalRarityLabel">Common</div>
+    </div>
+    <h2 id="modalBadgeTitle">Novice Scholar</h2>
+    <p class="modal-desc" id="modalBadgeDesc">Complete your first quest!</p>
+    
+    <div class="modal-progress-section">
+      <div class="modal-progress-header">
+        <span>Quest Progress</span>
+        <span id="modalProgressText">0 / 1</span>
+      </div>
+      <div class="modal-progress-bar">
+        <div class="modal-progress-fill" id="modalProgressFill"></div>
+      </div>
+    </div>
+    
+    <div class="modal-rewards-section">
+      <div class="reward-item">
+        <i class="ri-money-dollar-circle-fill"></i>
+        <span id="modalRewardText">+20 Coins Reward</span>
+      </div>
+    </div>
+    
+    <div class="modal-status-section" id="modalStatusText">
+      Status: Locked
+    </div>
+  </div>
+
+
+
   <!-- FLOATING ACHIEVEMENT TOAST ALERT -->
   <div class="achievement-toast glass" id="achievementToast">
     <div class="toast-icon">🏆</div>
@@ -476,14 +655,21 @@
     </div>
   </div>
 
+
   <!-- TASK ADDED POPUP -->
   <div id="taskPopup" class="task-popup glass">
     <i class="ri-notification-3-line"></i>
     <p id="taskPopupMessage">COMPLETE TASK ASAP</p>
   </div>
 
+  <!-- ACCESSIBILITY ANNOUNCER -->
+  <div id="srAnnouncement" class="sr-only" aria-live="polite"></div>
+
+
   <script src="script.js"></script>
 
 </body>
 
+
 </html>
+

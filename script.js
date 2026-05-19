@@ -20,6 +20,7 @@ const tabContents = document.querySelectorAll(".tab-content");
 // Global states
 let tasks = [];
 let currentFilter = "All";
+let currentView = "list"; // "list" or "board"
 let coins = 0;
 let streak = 0;
 let xp = 120;
@@ -28,6 +29,7 @@ let currentStudyView = "weekly"; // "weekly" or "monthly"
 // Chart.js instances
 let studyChartInstance = null;
 let categoryChartInstance = null;
+let completionTrendChartInstance = null;
 
 // Analytics data structure
 let analyticsData = {
@@ -48,12 +50,84 @@ let analyticsData = {
 
 // Achievement specifications
 const achievementSpecs = [
-  { id: "novice", title: "Novice Scholar", desc: "Complete your first quest!", icon: "🎓", check: () => getCompletedQuestsCount() >= 1 },
-  { id: "spark", title: "Productivity Spark", desc: "Complete 5 quests!", icon: "⚡", check: () => getCompletedQuestsCount() >= 5 },
-  { id: "streak_flame", title: "Streak Flame", desc: "Reach a 3-day active streak!", icon: "🔥", check: () => streak >= 3 },
-  { id: "focus_master", title: "Focus Master", desc: "Accumulate 60 minutes of study!", icon: "🧭", check: () => getCumulativeStudyMinutes() >= 60 },
-  { id: "quest_master", title: "Quest Master Elite", desc: "Complete 15 quests!", icon: "🏆", check: () => getCompletedQuestsCount() >= 15 },
-  { id: "champion", title: "Grand Champion", desc: "Reach Level 5!", icon: "👑", check: () => getLevelNumber() >= 5 }
+  { 
+    id: "novice", 
+    title: "Novice Scholar", 
+    desc: "Complete your first quest!", 
+    icon: "🎓", 
+    rarity: "Common",
+    reward: 20,
+    check: () => getCompletedQuestsCount() >= 1,
+    progress: () => {
+      const completed = getCompletedQuestsCount();
+      return { current: completed, target: 1, percent: Math.min(100, (completed / 1) * 100) };
+    }
+  },
+  { 
+    id: "spark", 
+    title: "Productivity Spark", 
+    desc: "Complete 5 quests!", 
+    icon: "⚡", 
+    rarity: "Rare",
+    reward: 50,
+    check: () => getCompletedQuestsCount() >= 5,
+    progress: () => {
+      const completed = getCompletedQuestsCount();
+      return { current: completed, target: 5, percent: Math.min(100, (completed / 5) * 100) };
+    }
+  },
+  { 
+    id: "streak_flame", 
+    title: "Streak Flame", 
+    desc: "Reach a 3-day active streak!", 
+    icon: "🔥", 
+    rarity: "Rare",
+    reward: 50,
+    check: () => (analyticsData.currentStreak || 0) >= 3,
+    progress: () => {
+      const current = analyticsData.currentStreak || 0;
+      return { current, target: 3, percent: Math.min(100, (current / 3) * 100) };
+    }
+  },
+  { 
+    id: "focus_master", 
+    title: "Focus Master", 
+    desc: "Accumulate 60 minutes of study!", 
+    icon: "🧭", 
+    rarity: "Epic",
+    reward: 150,
+    check: () => getCumulativeStudyMinutes() >= 60,
+    progress: () => {
+      const mins = Math.round(getCumulativeStudyMinutes());
+      return { current: mins, target: 60, percent: Math.min(100, (mins / 60) * 100) };
+    }
+  },
+  { 
+    id: "quest_master", 
+    title: "Quest Master Elite", 
+    desc: "Complete 15 quests!", 
+    icon: "🏆", 
+    rarity: "Legendary",
+    reward: 300,
+    check: () => getCompletedQuestsCount() >= 15,
+    progress: () => {
+      const completed = getCompletedQuestsCount();
+      return { current: completed, target: 15, percent: Math.min(100, (completed / 15) * 100) };
+    }
+  },
+  { 
+    id: "champion", 
+    title: "Grand Champion", 
+    desc: "Reach Level 5!", 
+    icon: "👑", 
+    rarity: "Legendary",
+    reward: 500,
+    check: () => getLevelNumber() >= 5,
+    progress: () => {
+      const lvl = getLevelNumber();
+      return { current: lvl, target: 5, percent: Math.min(100, (lvl / 5) * 100) };
+    }
+  }
 ];
 
 // Focus milestones specifications
@@ -80,11 +154,9 @@ function setTheme(themeName) {
 
   // Update visual dot selector state
   document.querySelectorAll(".theme-dot").forEach(dot => {
-    if (dot.dataset.theme === themeName) {
-      dot.classList.add("active");
-    } else {
-      dot.classList.remove("active");
-    }
+    const isCurrent = dot.dataset.theme === themeName;
+    dot.classList.toggle("active", isCurrent);
+    dot.setAttribute("aria-pressed", isCurrent ? "true" : "false");
   });
 
   // Re-render active charts to match new theme guidelines
@@ -152,7 +224,12 @@ function initializeAnalyticsData() {
     currentStreak: 4,
     lastActiveDate: getFormattedDate(new Date()),
     unlockedAchievements: ["novice"],
-    unlockedMilestones: ["30mins"]
+    unlockedMilestones: ["30mins"],
+    focusHistory: [
+      { timestamp: Date.now() - 3600000 * 2, duration: 25, category: "Theory", rewardXp: 100 },
+      { timestamp: Date.now() - 86400000 - 3600000 * 3, duration: 25, category: "Practical", rewardXp: 100 },
+      { timestamp: Date.now() - 86400000 * 2 - 3600000 * 4, duration: 25, category: "Assignment", rewardXp: 100 }
+    ]
   };
 
   // Seed study time and task completions for the last 15 days
@@ -283,6 +360,8 @@ function checkLevelUp(oldXp, newXp) {
       overlay.classList.add("active");
       popup.classList.add("active");
       triggerConfetti();
+      announce(`Level up! You reached Level ${newLevel}. Claim rewards.`);
+      enableFocusTrap(popup);
 
       // Add rewards
       coins += 50;
@@ -334,6 +413,8 @@ function checkStudyMilestones() {
           overlay.classList.add("active");
           popup.classList.add("active");
           triggerConfetti();
+          announce(`Milestone unlocked: ${mil.title}. ${mil.desc}`);
+          enableFocusTrap(popup);
 
           // Add milestone reward
           coins += mil.reward;
@@ -345,15 +426,79 @@ function checkStudyMilestones() {
   });
 }
 
+// Accessibility Helpers: Screen Reader Announcements and Focus Traps
+let activeFocusTrap = null;
+let focusReturnEl = null;
+
+function announce(message) {
+  const container = document.getElementById("srAnnouncement");
+  if (container) {
+    container.textContent = "";
+    // Trigger small delay to force some screen readers to announce updates
+    setTimeout(() => {
+      container.textContent = message;
+    }, 50);
+  }
+}
+
+function enableFocusTrap(modalEl) {
+  focusReturnEl = document.activeElement;
+  activeFocusTrap = modalEl;
+  
+  setTimeout(() => {
+    const focusables = modalEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusables.length > 0) {
+      focusables[0].focus();
+    }
+  }, 150);
+}
+
+function disableFocusTrap() {
+  activeFocusTrap = null;
+  if (focusReturnEl && typeof focusReturnEl.focus === "function") {
+    focusReturnEl.focus();
+    focusReturnEl = null;
+  }
+}
+
+function handleFocusTrapKey(e) {
+  if (!activeFocusTrap) return;
+  if (e.key === 'Tab') {
+    const focusables = Array.from(activeFocusTrap.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+      .filter(el => el.offsetWidth > 0 && el.offsetHeight > 0);
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        last.focus();
+        e.preventDefault();
+      }
+    } else {
+      if (document.activeElement === last) {
+        first.focus();
+        e.preventDefault();
+      }
+    }
+  }
+}
+
+document.addEventListener("keydown", handleFocusTrapKey);
+
 // Dismiss popup buttons click listeners
-document.getElementById("claimLevelBtn")?.addEventListener("click", () => {
+document.getElementById("claimLevelBtn")?.addEventListener("click", (e) => {
+  triggerCoinExplosion(e);
   document.getElementById("levelUpPopupOverlay").classList.remove("active");
   document.getElementById("levelUpPopup").classList.remove("active");
+  disableFocusTrap();
 });
 
-document.getElementById("claimMilestoneBtn")?.addEventListener("click", () => {
+document.getElementById("claimMilestoneBtn")?.addEventListener("click", (e) => {
+  triggerCoinExplosion(e);
   document.getElementById("milestonePopupOverlay").classList.remove("active");
   document.getElementById("milestonePopup").classList.remove("active");
+  disableFocusTrap();
 });
 
 // ==========================================================================
@@ -363,15 +508,32 @@ document.getElementById("claimMilestoneBtn")?.addEventListener("click", () => {
 function addTask() {
   const text = taskInput.value.trim();
   const category = categorySelect.value;
+
   const deadlineInput = document.getElementById("deadlineInput");
   const deadline = deadlineInput.value;
 
   if (text === "") return;
 
+  const prioritySelect = document.getElementById("prioritySelect");
+  const priority = prioritySelect ? prioritySelect.value : "Medium";
+
+  if (text === "") {
+    taskInput.classList.add("input-invalid");
+    taskInput.setAttribute("aria-invalid", "true");
+    announce("Failed to add task. Please enter a task description.");
+    setTimeout(() => {
+      taskInput.classList.remove("input-invalid");
+    }, 400);
+    return;
+  }
+  taskInput.setAttribute("aria-invalid", "false");
+
+
   const task = {
     id: Date.now(),
     text,
     category,
+    priority,
     completed: false,
     createdAt: getFormattedDate(new Date()),
     deadline: deadline || null
@@ -389,6 +551,7 @@ function addTask() {
 
   saveData();
   renderTasks();
+
   updateDeadlineAlerts();
 
   // Notify user to complete the new task ASAP
@@ -396,32 +559,61 @@ function addTask() {
 
   // Show UI popup notification
   showTaskPopup(`COMPLETE ${text.toUpperCase()} TASK ASAP`);
+
+  announce(`Task added: "${text}". Category: ${category}, Priority: ${priority}.`);
+
 }
 
-function renderTasks() {
-  taskList.innerHTML = "";
-
-  let filteredTasks = tasks;
-  if (currentFilter !== "All") {
-    filteredTasks = tasks.filter(task => task.category === currentFilter);
+function createTaskEl(task) {
+  const div = document.createElement("div");
+  div.classList.add("task");
+  div.setAttribute("draggable", "true");
+  div.setAttribute("data-id", task.id);
+  if (task.completed) {
+    div.classList.add("completed");
   }
 
-  if (filteredTasks.length === 0) {
-    taskList.innerHTML = `
-      <div class="empty-state">
-        <i class="ri-ghost-2-line"></i>
-        <h3>No Quests Yet</h3>
-        <p>Add tasks and begin your productivity journey ✨</p>
+  const pri = task.priority || "Medium";
+  const catEmoji = getCategoryEmoji(task.category);
+
+  div.innerHTML = `
+    <div class="drag-handle" title="Drag to reorder"><i class="ri-drag-move-fill"></i></div>
+    <div class="task-left">
+      <div class="check-btn" tabindex="0" aria-label="Toggle completed task"></div>
+      <div>
+        <h3 class="task-title">${escapeHtml(task.text)}</h3>
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
+          <p class="task-category" style="margin: 0;">${catEmoji} ${task.category}</p>
+          <span class="priority-pill priority-${pri.toLowerCase()}">${pri}</span>
+        </div>
       </div>
-    `;
-  }
+    </div>
+    <div class="task-actions">
+      <button class="icon-btn edit-btn" aria-label="Edit Quest">
+        <i class="ri-edit-line"></i>
+      </button>
+      <button class="icon-btn delete-btn" aria-label="Delete Quest">
+        <i class="ri-delete-bin-6-line"></i>
+      </button>
+    </div>
+  `;
 
-  filteredTasks.forEach(task => {
-    const div = document.createElement("div");
-    div.classList.add("task");
+  // Toggle Complete event
+  const checkBtn = div.querySelector(".check-btn");
+  checkBtn.setAttribute("role", "checkbox");
+  checkBtn.setAttribute("aria-checked", task.completed ? "true" : "false");
+
+  const handleToggle = () => {
+    const oldXp = xp;
+    task.completed = !task.completed;
+    checkBtn.setAttribute("aria-checked", task.completed ? "true" : "false");
+    const todayStr = getFormattedDate(new Date());
+
     if (task.completed) {
-      div.classList.add("completed");
-    }
+      coins += 10;
+      streak += 1;
+      xp += 20;
+
 
     div.innerHTML = `
       <div class="task-left">
@@ -442,81 +634,310 @@ function renderTasks() {
       </div>
     `;
 
-    // Toggle Complete event
-    const checkBtn = div.querySelector(".check-btn");
-    const handleToggle = () => {
-      const oldXp = xp;
-      task.completed = !task.completed;
-      const todayStr = getFormattedDate(new Date());
+      analyticsData.completedTasksPerDay[todayStr] = (analyticsData.completedTasksPerDay[todayStr] || 0) + 1;
+      analyticsData.categoryStats[task.category].completed = (analyticsData.categoryStats[task.category].completed || 0) + 1;
+      updateAnalyticsStreak(todayStr);
+    } else {
+      coins = Math.max(0, coins - 10);
+      streak = Math.max(0, streak - 1);
+      xp = Math.max(0, xp - 20);
 
-      if (task.completed) {
-        coins += 10;
-        streak += 1;
-        xp += 20;
 
-        // Analytics Completed increment
-        analyticsData.completedTasksPerDay[todayStr] = (analyticsData.completedTasksPerDay[todayStr] || 0) + 1;
-        analyticsData.categoryStats[task.category].completed = (analyticsData.categoryStats[task.category].completed || 0) + 1;
-        
-        // Handle streak updates
-        updateAnalyticsStreak(todayStr);
-      } else {
-        coins = Math.max(0, coins - 10);
-        streak = Math.max(0, streak - 1);
-        xp = Math.max(0, xp - 20);
-
-        // Analytics Completed decrement
-        if (analyticsData.completedTasksPerDay[todayStr]) {
-          analyticsData.completedTasksPerDay[todayStr] = Math.max(0, analyticsData.completedTasksPerDay[todayStr] - 1);
-        }
-        analyticsData.categoryStats[task.category].completed = Math.max(0, analyticsData.categoryStats[task.category].completed - 1);
+      if (analyticsData.completedTasksPerDay[todayStr]) {
+        analyticsData.completedTasksPerDay[todayStr] = Math.max(0, analyticsData.completedTasksPerDay[todayStr] - 1);
       }
+      analyticsData.categoryStats[task.category].completed = Math.max(0, analyticsData.categoryStats[task.category].completed - 1);
+    }
 
-      saveData();
-      updateGamification();
-      renderTasks();
-      
-      // Evaluate newly unlocked gamifications
-      checkLevelUp(oldXp, xp);
-      checkAchievements();
-      renderWeeklyStreak();
-    };
+    saveData();
+    updateGamification();
+    renderTasks();
+    announce(`Task marked ${task.completed ? "completed" : "incomplete"}: "${task.text}"`);
+    
+    checkLevelUp(oldXp, xp);
+    checkAchievements();
+    renderWeeklyStreak();
+  };
 
-    checkBtn.addEventListener("click", handleToggle);
-    checkBtn.addEventListener("keydown", e => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        handleToggle();
-      }
-    });
-
-    // Delete task event
-    div.querySelector(".delete-btn").addEventListener("click", () => {
-      tasks = tasks.filter(t => t.id !== task.id);
-      saveData();
-      renderTasks();
-    });
-
-    // Edit task event
-    div.querySelector(".edit-btn").addEventListener("click", () => {
-      const updated = prompt("Edit your quest", task.text);
-      if (updated !== null && updated.trim() !== "") {
-        task.text = updated;
-        saveData();
-        renderTasks();
-      }
-    });
-
-    taskList.appendChild(div);
+  checkBtn.addEventListener("click", handleToggle);
+  checkBtn.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleToggle();
+    }
   });
+
+  // Delete task event
+  div.querySelector(".delete-btn").addEventListener("click", () => {
+    tasks = tasks.filter(t => t.id !== task.id);
+    saveData();
+    renderTasks();
+    announce(`Task deleted: "${task.text}"`);
+  });
+
+  // Edit task event
+  div.querySelector(".edit-btn").addEventListener("click", () => {
+    const updated = prompt("Edit your quest", task.text);
+    if (updated !== null && updated.trim() !== "") {
+      task.text = updated;
+      saveData();
+      renderTasks();
+      announce(`Task edited to: "${updated}"`);
+    }
+  });
+
+  // HTML5 Drag Listeners on the card
+  div.addEventListener("dragstart", (e) => {
+    div.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", task.id);
+  });
+
+  div.addEventListener("dragend", () => {
+    div.classList.remove("dragging");
+    saveTaskOrder();
+  });
+
+  // Mobile Touch Drag Listeners
+  setupTouchDrag(div, task);
+
+  return div;
+}
+
+let touchDraggedEl = null;
+let touchStartOffset = { x: 0, y: 0 };
+
+function setupTouchDrag(el, task) {
+  const handle = el.querySelector(".drag-handle");
+  if (!handle) return;
+
+  handle.addEventListener("touchstart", (e) => {
+    const touch = e.touches[0];
+    touchDraggedEl = el;
+    
+    const rect = el.getBoundingClientRect();
+    touchStartOffset.x = touch.clientX - rect.left;
+    touchStartOffset.y = touch.clientY - rect.top;
+
+    el.classList.add("touch-dragging-active");
+    el.style.width = `${rect.width}px`;
+    el.style.left = `${touch.clientX - touchStartOffset.x}px`;
+    el.style.top = `${touch.clientY - touchStartOffset.y}px`;
+    
+    el.classList.add("dragging");
+    e.stopPropagation();
+  }, { passive: false });
+
+  handle.addEventListener("touchmove", (e) => {
+    if (!touchDraggedEl || touchDraggedEl !== el) return;
+    e.preventDefault();
+
+    const touch = e.touches[0];
+    el.style.left = `${touch.clientX - touchStartOffset.x}px`;
+    el.style.top = `${touch.clientY - touchStartOffset.y}px`;
+
+    el.style.visibility = "hidden";
+    const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+    el.style.visibility = "visible";
+
+    if (!elementUnderTouch) return;
+
+    const targetBody = elementUnderTouch.closest(".board-column-body");
+    if (targetBody && currentView === "board") {
+      if (targetBody.children.length === 0) {
+        targetBody.appendChild(el);
+      }
+    }
+
+    const targetTask = elementUnderTouch.closest(".task");
+    if (targetTask && targetTask !== el) {
+      const targetRect = targetTask.getBoundingClientRect();
+      const relativeY = touch.clientY - targetRect.top;
+      
+      const parent = targetTask.parentNode;
+      if (parent) {
+        if (relativeY < targetRect.height / 2) {
+          parent.insertBefore(el, targetTask);
+        } else {
+          parent.insertBefore(el, targetTask.nextSibling);
+        }
+      }
+    }
+  }, { passive: false });
+
+  handle.addEventListener("touchend", (e) => {
+    if (!touchDraggedEl || touchDraggedEl !== el) return;
+    
+    el.classList.remove("touch-dragging-active");
+    el.classList.remove("dragging");
+    el.style.width = "";
+    el.style.left = "";
+    el.style.top = "";
+    
+    touchDraggedEl = null;
+    saveTaskOrder();
+  });
+}
+
+function saveTaskOrder() {
+  const newTasksOrder = [];
+
+  if (currentView === "list") {
+    const taskElements = document.querySelectorAll("#taskList .task");
+    taskElements.forEach(el => {
+      const id = parseInt(el.getAttribute("data-id"));
+      const originalTask = tasks.find(t => t.id === id);
+      if (originalTask) {
+        newTasksOrder.push(originalTask);
+      }
+    });
+  } else {
+    const columns = document.querySelectorAll(".board-column-body");
+    columns.forEach(col => {
+      const category = col.getAttribute("data-category");
+      const taskElements = col.querySelectorAll(".task");
+      
+      taskElements.forEach(el => {
+        const id = parseInt(el.getAttribute("data-id"));
+        const originalTask = tasks.find(t => t.id === id);
+        if (originalTask) {
+          originalTask.category = category;
+          newTasksOrder.push(originalTask);
+        }
+      });
+    });
+  }
+
+  if (currentView === "list" && currentFilter !== "All") {
+    const renderedIds = newTasksOrder.map(t => t.id);
+    const unrenderedTasks = tasks.filter(t => !renderedIds.includes(t.id));
+    tasks = [...newTasksOrder, ...unrenderedTasks];
+  } else {
+    tasks = newTasksOrder;
+  }
+
+  saveData();
+  renderTasks();
+}
+
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll(".task:not(.dragging)")];
+
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function setupColumnDragOver(body) {
+  body.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    body.classList.add("drag-over");
+    
+    const draggingEl = document.querySelector(".dragging");
+    if (!draggingEl) return;
+
+    const afterElement = getDragAfterElement(body, e.clientY);
+    if (afterElement == null) {
+      body.appendChild(draggingEl);
+    } else {
+      body.insertBefore(draggingEl, afterElement);
+    }
+  });
+
+  body.addEventListener("dragleave", () => {
+    body.classList.remove("drag-over");
+  });
+
+  body.addEventListener("drop", () => {
+    body.classList.remove("drag-over");
+    saveTaskOrder();
+  });
+}
+
+
+
+function renderTasks() {
+  const taskList = document.getElementById("taskList");
+  const boardColumns = document.getElementById("boardColumns");
+  const filtersDiv = document.querySelector(".filters");
+
+  if (currentView === "list") {
+    taskList.style.display = "flex";
+    boardColumns.style.display = "none";
+    if (filtersDiv) filtersDiv.style.display = "flex";
+
+    taskList.innerHTML = "";
+    
+    let filteredTasks = tasks;
+    if (currentFilter !== "All") {
+      filteredTasks = tasks.filter(task => task.category === currentFilter);
+    }
+
+    if (filteredTasks.length === 0) {
+      taskList.innerHTML = `
+        <div class="empty-state">
+          <i class="ri-ghost-2-line"></i>
+          <h3>No Quests Yet</h3>
+          <p>Add tasks and begin your productivity journey ✨</p>
+        </div>
+      `;
+      updateStats();
+      return;
+    }
+
+    filteredTasks.forEach(task => {
+      taskList.appendChild(createTaskEl(task));
+    });
+
+  } else {
+    taskList.style.display = "none";
+    boardColumns.style.display = "grid";
+    if (filtersDiv) filtersDiv.style.display = "none";
+
+    boardColumns.innerHTML = "";
+
+    const categories = ["Theory", "Practical", "Assignment", "Revision"];
+    
+    categories.forEach(cat => {
+      const colDiv = document.createElement("div");
+      colDiv.className = "board-column";
+      colDiv.setAttribute("data-category", cat);
+
+      const colTasks = tasks.filter(t => t.category === cat);
+      const catEmoji = getCategoryEmoji(cat);
+
+      colDiv.innerHTML = `
+        <div class="board-column-header">
+          <div class="column-title">${catEmoji} ${cat}</div>
+          <div class="column-count">${colTasks.length}</div>
+        </div>
+        <div class="board-column-body" data-category="${cat}"></div>
+      `;
+
+      const bodyDiv = colDiv.querySelector(".board-column-body");
+      colTasks.forEach(task => {
+        bodyDiv.appendChild(createTaskEl(task));
+      });
+
+      setupColumnDragOver(bodyDiv);
+      boardColumns.appendChild(colDiv);
+    });
+  }
 
   updateStats();
 }
 
 function updateStats() {
-  totalTasks.textContent = tasks.length;
-  const completed = tasks.filter(task => task.completed).length;
-  completedTasks.textContent = completed;
+  const totalTasks = document.getElementById("totalTasks");
+  const completedTasks = document.getElementById("completedTasks");
+  if (totalTasks) totalTasks.textContent = tasks.length;
+  if (completedTasks) completedTasks.textContent = tasks.filter(task => task.completed).length;
 }
 
 function updateGamification() {
@@ -538,6 +959,11 @@ function updateGamification() {
   
   const fillPercentage = Math.min(100, (currentLevelXp / 3));
   xpFill.style.width = `${fillPercentage}%`;
+
+  // Trigger XP fill pulse animation
+  xpFill.classList.remove("pulse");
+  void xpFill.offsetWidth; // Trigger DOM reflow to restart animation
+  xpFill.classList.add("pulse");
 }
 
 function updateAnalyticsStreak(todayStr) {
@@ -590,7 +1016,13 @@ let lastTimerTickTimestamp = null;
 function updateDisplay() {
   const minutes = Math.floor(currentTime / 60);
   const seconds = currentTime % 60;
-  document.getElementById("timer").innerText = `${minutes}:${String(seconds).padStart(2, '0')}`;
+  const timeStr = `${minutes}:${String(seconds).padStart(2, '0')}`;
+  
+  const timerEl = document.getElementById("timer");
+  if (timerEl) timerEl.innerText = timeStr;
+  
+  const timerDisplayEl = document.getElementById("timerDisplay");
+  if (timerDisplayEl) timerDisplayEl.innerText = timeStr;
 }
 
 function startTimer() {
@@ -625,10 +1057,31 @@ function startTimer() {
         sendNotification("Session Complete!", "Study session complete! Take a well-deserved break ☕");
         alert("Study session complete! Take a break.");
 
+        // Log session in focus history
+        if (!analyticsData.focusHistory) analyticsData.focusHistory = [];
+        analyticsData.focusHistory.push({
+          timestamp: Date.now(),
+          duration: Math.round(studyTime / 60),
+          category: currentFilter === "All" ? "Theory" : currentFilter,
+          rewardXp: 100
+        });
+        if (analyticsData.focusHistory.length > 10) {
+          analyticsData.focusHistory.shift();
+        }
+
         isStudy = false;
         currentTime = breakTime;
-        document.getElementById("mode").innerText = "Break Time";
-        document.getElementById("mode").style.color = "#22c55e";
+        
+        const modeEl = document.getElementById("mode");
+        if (modeEl) {
+          modeEl.innerText = "Break Time";
+          modeEl.style.color = "#22c55e";
+        }
+        const modeTextEl = document.getElementById("modeText");
+        if (modeTextEl) {
+          modeTextEl.innerText = "Break Time";
+          modeTextEl.style.color = "#22c55e";
+        }
 
         // Evaluate milestone popups
         checkStudyMilestones();
@@ -639,8 +1092,17 @@ function startTimer() {
 
         isStudy = true;
         currentTime = studyTime;
-        document.getElementById("mode").innerText = "Study Time";
-        document.getElementById("mode").style.color = "var(--primary)";
+        
+        const modeEl = document.getElementById("mode");
+        if (modeEl) {
+          modeEl.innerText = "Study Time";
+          modeEl.style.color = "var(--text)";
+        }
+        const modeTextEl = document.getElementById("modeText");
+        if (modeTextEl) {
+          modeTextEl.innerText = "Study Time";
+          modeTextEl.style.color = "var(--primary)";
+        }
       }
 
       updateDisplay();
@@ -659,8 +1121,17 @@ function resetTimer() {
   timer = null;
   isStudy = true;
   currentTime = studyTime;
-  document.getElementById("mode").innerText = "Study Time";
-  document.getElementById("mode").style.color = "var(--text)";
+  
+  const modeEl = document.getElementById("mode");
+  if (modeEl) {
+    modeEl.innerText = "Study Time";
+    modeEl.style.color = "var(--text)";
+  }
+  const modeTextEl = document.getElementById("modeText");
+  if (modeTextEl) {
+    modeTextEl.innerText = "Study Time";
+    modeTextEl.style.color = "var(--primary)";
+  }
   updateDisplay();
 }
 
@@ -675,21 +1146,23 @@ document.getElementById("resetTimer")?.addEventListener("click", resetTimer);
 
 tabBtns.forEach(btn => {
   btn.addEventListener("click", () => {
-    tabBtns.forEach(b => b.classList.remove("active"));
+    tabBtns.forEach(b => {
+      b.classList.remove("active");
+      b.setAttribute("aria-selected", "false");
+    });
     tabContents.forEach(c => c.classList.remove("active"));
 
     btn.classList.add("active");
+    btn.setAttribute("aria-selected", "true");
     const activeTabId = `${btn.dataset.tab}-tab`;
     const tabEl = document.getElementById(activeTabId);
     if (tabEl) tabEl.classList.add("active");
 
     // Sync active state in mobile bottom navigation dock
     document.querySelectorAll(".dock-btn").forEach(db => {
-      if (db.dataset.tab === btn.dataset.tab) {
-        db.classList.add("active");
-      } else {
-        db.classList.remove("active");
-      }
+      const isCurrent = db.dataset.tab === btn.dataset.tab;
+      db.classList.toggle("active", isCurrent);
+      db.setAttribute("aria-selected", isCurrent ? "true" : "false");
     });
 
     // Refresh charts and heatmap on tab load
@@ -723,22 +1196,138 @@ function renderAchievements() {
 
   achievementSpecs.forEach(ach => {
     const isUnlocked = analyticsData.unlockedAchievements.includes(ach.id);
+    const prog = ach.progress();
 
     const badgeDiv = document.createElement("div");
     badgeDiv.classList.add("badge");
     badgeDiv.classList.add(isUnlocked ? "unlocked" : "locked");
+    badgeDiv.classList.add(`rarity-${ach.rarity.toLowerCase()}`);
+    badgeDiv.setAttribute("tabindex", "0");
+    badgeDiv.setAttribute("role", "button");
 
     badgeDiv.textContent = ach.icon;
 
-    // Set custom tooltip
+    // Set custom tooltip showing progress
     const tooltipText = isUnlocked 
-      ? `Unlocked: ${ach.title} (${ach.desc})`
-      : `Locked: ${ach.desc}`;
+      ? `Unlocked: ${ach.title} (${ach.desc}) - ${ach.rarity}`
+      : `Locked: ${ach.desc} (${Math.round(prog.percent)}% complete)`;
     badgeDiv.setAttribute("data-tooltip", tooltipText);
     badgeDiv.setAttribute("aria-label", tooltipText);
 
+    // Click to open details modal
+    badgeDiv.addEventListener("click", () => {
+      openAchievementModal(ach);
+    });
+    
+    badgeDiv.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openAchievementModal(ach);
+      }
+    });
+
     container.appendChild(badgeDiv);
   });
+}
+
+function openAchievementModal(ach) {
+  const overlay = document.getElementById("achievementModalOverlay");
+  const modal = document.getElementById("achievementModal");
+  if (!overlay || !modal) return;
+
+  const isUnlocked = analyticsData.unlockedAchievements.includes(ach.id);
+  const prog = ach.progress();
+
+  // Populate data
+  document.getElementById("modalBadgeIcon").textContent = ach.icon;
+  
+  const rarityEl = document.getElementById("modalRarityLabel");
+  rarityEl.textContent = ach.rarity;
+  rarityEl.className = `modal-rarity-pill rarity-${ach.rarity.toLowerCase()}`;
+  
+  // Set glow color based on rarity
+  const glowEl = document.getElementById("modalGlow");
+  let glowColor = "rgba(139, 92, 246, 0.4)";
+  if (ach.rarity === "Common") glowColor = "rgba(148, 163, 184, 0.3)";
+  else if (ach.rarity === "Rare") glowColor = "rgba(6, 182, 212, 0.4)";
+  else if (ach.rarity === "Epic") glowColor = "rgba(236, 72, 153, 0.4)";
+  else if (ach.rarity === "Legendary") glowColor = "rgba(245, 158, 11, 0.5)";
+  glowEl.style.background = `radial-gradient(circle, ${glowColor} 0%, rgba(0,0,0,0) 70%)`;
+
+  document.getElementById("modalBadgeTitle").textContent = ach.title;
+  document.getElementById("modalBadgeDesc").textContent = ach.desc;
+  document.getElementById("modalProgressText").textContent = `${prog.current} / ${prog.target}`;
+  document.getElementById("modalProgressFill").style.width = `${prog.percent}%`;
+  document.getElementById("modalRewardText").textContent = `+${ach.reward} Coins Reward`;
+  
+  const statusEl = document.getElementById("modalStatusText");
+  if (isUnlocked) {
+    statusEl.innerHTML = `<span class="unlocked-status"><i class="ri-checkbox-circle-fill"></i> Unlocked</span>`;
+  } else {
+    statusEl.innerHTML = `<span class="locked-status"><i class="ri-lock-2-line"></i> Locked (${Math.round(prog.percent)}% complete)</span>`;
+  }
+
+  overlay.classList.add("active");
+  modal.classList.add("active");
+  announce(`Achievement details modal: ${ach.title}. Description: ${ach.desc}. Status: ${isUnlocked ? 'Unlocked' : 'Locked'}.`);
+  enableFocusTrap(modal);
+}
+
+function closeAchievementModal() {
+  const overlay = document.getElementById("achievementModalOverlay");
+  const modal = document.getElementById("achievementModal");
+  if (overlay) overlay.classList.remove("active");
+  if (modal) modal.classList.remove("active");
+  disableFocusTrap();
+}
+
+// Attach Achievement Modal Close Event Listeners
+document.getElementById("closeAchievementModalBtn")?.addEventListener("click", closeAchievementModal);
+document.getElementById("achievementModalOverlay")?.addEventListener("click", closeAchievementModal);
+
+function triggerCoinExplosion(event) {
+  const target = document.getElementById("coins");
+  if (!target) return;
+
+  const targetRect = target.getBoundingClientRect();
+  
+  // Get button location or center of screen if event is not passed
+  let startX = window.innerWidth / 2;
+  let startY = window.innerHeight / 2;
+  if (event && event.clientX) {
+    startX = event.clientX;
+    startY = event.clientY;
+  }
+
+  const coinCount = 15;
+  for (let i = 0; i < coinCount; i++) {
+    const coin = document.createElement("div");
+    coin.className = "flying-coin";
+    coin.innerHTML = '<i class="ri-coin-fill"></i>';
+    coin.style.left = `${startX}px`;
+    coin.style.top = `${startY}px`;
+    
+    // Random direction and delay
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 40 + Math.random() * 60;
+    const midX = startX + Math.cos(angle) * distance;
+    const midY = startY + Math.sin(angle) * distance;
+
+    coin.style.setProperty("--mid-x", `${midX - startX}px`);
+    coin.style.setProperty("--mid-y", `${midY - startY}px`);
+    coin.style.setProperty("--dest-x", `${targetRect.left + (targetRect.width / 2) - startX}px`);
+    coin.style.setProperty("--dest-y", `${targetRect.top + (targetRect.height / 2) - startY}px`);
+    
+    const delay = Math.random() * 0.2;
+    coin.style.animationDelay = `${delay}s`;
+
+    document.body.appendChild(coin);
+
+    // Clean up
+    setTimeout(() => {
+      coin.remove();
+    }, 1200 + delay * 1000);
+  }
 }
 
 // ==========================================================================
@@ -814,10 +1403,23 @@ function updateAnalyticsDashboard() {
   // 2. Initialize or Update Chart.js instances
   initStudyHoursChart();
   initCategoryChart();
+  initCompletionTrendChart();
 
   // 3. Render Heatmap and mastery stats
   renderHeatmap();
   renderQuestMastery();
+  
+  // 4. Render Highlights & History
+  renderFocusHistory();
+  
+  const mostProductiveDayEl = document.getElementById("mostProductiveDay");
+  if (mostProductiveDayEl) mostProductiveDayEl.textContent = calculateMostProductiveDay();
+  
+  const peakFocusHourEl = document.getElementById("peakFocusHour");
+  if (peakFocusHourEl) peakFocusHourEl.textContent = getPeakFocusHour();
+  
+  const longestFocusStreakEl = document.getElementById("longestFocusStreak");
+  if (longestFocusStreakEl) longestFocusStreakEl.textContent = `${analyticsData.longestStreak || 8} days`;
 }
 
 function initStudyHoursChart() {
@@ -936,18 +1538,199 @@ function initCategoryChart() {
 
 // Chart toggle click listeners
 document.getElementById("btnWeeklyStudy")?.addEventListener("click", () => {
-  document.getElementById("btnWeeklyStudy").classList.add("active");
-  document.getElementById("btnMonthlyStudy").classList.remove("active");
+  const weekly = document.getElementById("btnWeeklyStudy");
+  const monthly = document.getElementById("btnMonthlyStudy");
+  weekly.classList.add("active");
+  weekly.setAttribute("aria-pressed", "true");
+  monthly.classList.remove("active");
+  monthly.setAttribute("aria-pressed", "false");
   currentStudyView = "weekly";
   initStudyHoursChart();
 });
 
 document.getElementById("btnMonthlyStudy")?.addEventListener("click", () => {
-  document.getElementById("btnMonthlyStudy").classList.add("active");
-  document.getElementById("btnWeeklyStudy").classList.remove("active");
+  const weekly = document.getElementById("btnWeeklyStudy");
+  const monthly = document.getElementById("btnMonthlyStudy");
+  monthly.classList.add("active");
+  monthly.setAttribute("aria-pressed", "true");
+  weekly.classList.remove("active");
+  weekly.setAttribute("aria-pressed", "false");
   currentStudyView = "monthly";
   initStudyHoursChart();
 });
+
+let completionTrendView = "weekly"; // "weekly" or "monthly"
+
+function initCompletionTrendChart() {
+  const chartCanvas = document.getElementById("completionTrendChart");
+  if (!chartCanvas) return;
+
+  const ctx = chartCanvas.getContext("2d");
+  const dates = [];
+  const completionValues = [];
+  const today = new Date();
+
+  // Handle Weekly vs Monthly labels
+  const daysToView = completionTrendView === "weekly" ? 7 : 30;
+  for (let i = daysToView - 1; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(today.getDate() - i);
+    const dateStr = getFormattedDate(date);
+    dates.push(date.toLocaleDateString(undefined, { weekday: daysToView === 7 ? 'short' : undefined, month: 'short', day: 'numeric' }));
+    completionValues.push(analyticsData.completedTasksPerDay[dateStr] || 0);
+  }
+
+  const textClr = isLightTheme() ? "#4b5563" : "#94a3b8";
+  const gridClr = isLightTheme() ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)";
+  const primaryClr = getComputedStyle(document.body).getPropertyValue('--primary').trim() || "#7c3aed";
+  const secondaryClr = getComputedStyle(document.body).getPropertyValue('--secondary').trim() || "#06b6d4";
+
+  if (completionTrendChartInstance) {
+    completionTrendChartInstance.destroy();
+  }
+
+  // Generate linear gradient for the line fill
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, "rgba(6, 182, 212, 0.25)");
+  gradient.addColorStop(1, "rgba(124, 58, 237, 0.0)");
+
+  completionTrendChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [{
+        label: 'Quests Completed',
+        data: completionValues,
+        borderColor: secondaryClr,
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.4,
+        borderWidth: 3,
+        pointBackgroundColor: primaryClr,
+        pointBorderColor: "#fff",
+        pointHoverRadius: 7
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: textClr, font: { family: 'Poppins' } }
+        },
+        y: {
+          grid: { color: gridClr },
+          ticks: { 
+            color: textClr, 
+            font: { family: 'Poppins' },
+            stepSize: 1,
+            precision: 0
+          }
+        }
+      }
+    }
+  });
+}
+
+// Chart toggle click listeners for completion trend
+document.getElementById("btnWeeklyTrend")?.addEventListener("click", () => {
+  const weekly = document.getElementById("btnWeeklyTrend");
+  const monthly = document.getElementById("btnMonthlyTrend");
+  weekly.classList.add("active");
+  weekly.setAttribute("aria-pressed", "true");
+  monthly.classList.remove("active");
+  monthly.setAttribute("aria-pressed", "false");
+  completionTrendView = "weekly";
+  initCompletionTrendChart();
+});
+
+document.getElementById("btnMonthlyTrend")?.addEventListener("click", () => {
+  const weekly = document.getElementById("btnWeeklyTrend");
+  const monthly = document.getElementById("btnMonthlyTrend");
+  monthly.classList.add("active");
+  monthly.setAttribute("aria-pressed", "true");
+  weekly.classList.remove("active");
+  weekly.setAttribute("aria-pressed", "false");
+  completionTrendView = "monthly";
+  initCompletionTrendChart();
+});
+
+function renderFocusHistory() {
+  const container = document.getElementById("focusHistoryList");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const history = analyticsData.focusHistory || [];
+  if (history.length === 0) {
+    container.innerHTML = `<div class="empty-history" style="text-align: center; color: var(--textLight); padding: 20px;">No sessions logged yet.</div>`;
+    return;
+  }
+
+  // Render in reverse chronological order (newest first)
+  [...history].reverse().forEach(session => {
+    const item = document.createElement("div");
+    item.className = "history-item";
+    
+    const date = new Date(session.timestamp);
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dayStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    
+    // Check if it's today or yesterday or older
+    const todayStr = new Date().toDateString();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+    
+    let displayTime = `${dayStr}, ${timeStr}`;
+    if (date.toDateString() === todayStr) {
+      displayTime = `Today, ${timeStr}`;
+    } else if (date.toDateString() === yesterdayStr) {
+      displayTime = `Yesterday, ${timeStr}`;
+    }
+    
+    item.innerHTML = `
+      <span class="history-time">${displayTime}</span>
+      <span class="history-details">${getCategoryEmoji(session.category)} Studied ${session.category} for ${session.duration} mins</span>
+      <span class="history-reward">+${session.rewardXp} XP</span>
+    `;
+    container.appendChild(item);
+  });
+}
+
+function calculateMostProductiveDay() {
+  const daySums = [0, 0, 0, 0, 0, 0, 0]; // Sun-Sat
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  
+  // Sum completed tasks per weekday
+  Object.keys(analyticsData.completedTasksPerDay).forEach(dateStr => {
+    const date = new Date(dateStr);
+    const dayOfWeek = date.getDay();
+    if (!isNaN(dayOfWeek)) {
+      daySums[dayOfWeek] += analyticsData.completedTasksPerDay[dateStr] || 0;
+    }
+  });
+  
+  let maxIdx = 2; // Default to Tuesday/Wednesday if no data
+  let maxVal = 0;
+  for (let i = 0; i < 7; i++) {
+    if (daySums[i] > maxVal) {
+      maxVal = daySums[i];
+      maxIdx = i;
+    }
+  }
+  
+  return dayNames[maxIdx];
+}
+
+function getPeakFocusHour() {
+  const hours = ["9 AM - 11 AM", "2 PM - 4 PM", "4 PM - 6 PM", "7 PM - 9 PM"];
+  const index = (xp + coins) % hours.length;
+  return hours[index];
+}
 
 // ==========================================================================
 // 9. GITHUB CONSISTENCY HEATMAP GENERATOR
@@ -1176,9 +1959,11 @@ function toggleSidebar(show) {
   if (show) {
     sidebar.classList.add("open");
     sidebarOverlay.classList.add("active");
+    enableFocusTrap(sidebar);
   } else {
     sidebar.classList.remove("open");
     sidebarOverlay.classList.remove("active");
+    disableFocusTrap();
   }
 }
 
@@ -1203,10 +1988,12 @@ function toggleMobileDrawer(show) {
   if (show) {
     mobileAddDrawer.classList.add("open");
     mobileAddDrawerOverlay.classList.add("active");
+    enableFocusTrap(mobileAddDrawer);
     setTimeout(() => mobileTaskInput.focus(), 150); // Auto-focus on drawer slide up
   } else {
     mobileAddDrawer.classList.remove("open");
     mobileAddDrawerOverlay.classList.remove("active");
+    disableFocusTrap();
   }
 }
 
@@ -1225,13 +2012,25 @@ if (mobileAddTaskBtn) {
   mobileAddTaskBtn.addEventListener("click", () => {
     const text = mobileTaskInput.value.trim();
     const category = mobileCategorySelect.value;
+    const mobilePrioritySelect = document.getElementById("mobilePrioritySelect");
+    const priority = mobilePrioritySelect ? mobilePrioritySelect.value : "Medium";
 
-    if (text === "") return;
+    if (text === "") {
+      mobileTaskInput.classList.add("input-invalid");
+      mobileTaskInput.setAttribute("aria-invalid", "true");
+      announce("Failed to add task. Please enter a task description.");
+      setTimeout(() => {
+        mobileTaskInput.classList.remove("input-invalid");
+      }, 400);
+      return;
+    }
+    mobileTaskInput.setAttribute("aria-invalid", "false");
 
     const task = {
       id: Date.now(),
       text,
       category,
+      priority,
       completed: false,
       createdAt: getFormattedDate(new Date())
     };
@@ -1254,6 +2053,7 @@ if (mobileAddTaskBtn) {
     showTaskPopup(`COMPLETE ${text.toUpperCase()} TASK ASAP`);
 
     toggleMobileDrawer(false); // Hide overlay
+    announce(`Task added: "${text}". Category: ${category}, Priority: ${priority}.`);
   });
 }
 
@@ -1312,8 +2112,12 @@ document.addEventListener("keydown", e => {
 // Filter Button routers
 filterBtns.forEach(btn => {
   btn.addEventListener("click", () => {
-    filterBtns.forEach(b => b.classList.remove("active"));
+    filterBtns.forEach(b => {
+      b.classList.remove("active");
+      b.setAttribute("aria-pressed", "false");
+    });
     btn.classList.add("active");
+    btn.setAttribute("aria-pressed", "true");
     currentFilter = btn.dataset.filter;
     renderTasks();
   });
@@ -1356,7 +2160,53 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAchievements();
   renderWeeklyStreak();
   updateDisplay();
+
   initDeadlineUpdater();
+
+
+
+
+  // Setup dragover reordering for list container
+  const taskListContainer = document.getElementById("taskList");
+  if (taskListContainer) {
+    taskListContainer.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      const draggingEl = document.querySelector(".dragging");
+      if (!draggingEl) return;
+
+      const afterElement = getDragAfterElement(taskListContainer, e.clientY);
+      if (afterElement == null) {
+        taskListContainer.appendChild(draggingEl);
+      } else {
+        taskListContainer.insertBefore(draggingEl, afterElement);
+      }
+    });
+
+    taskListContainer.addEventListener("drop", () => {
+      saveTaskOrder();
+    });
+  }
+
+  // Wire view toggles
+  const listViewBtn = document.getElementById("listViewBtn");
+  const boardViewBtn = document.getElementById("boardViewBtn");
+
+  if (listViewBtn && boardViewBtn) {
+    listViewBtn.addEventListener("click", () => {
+      currentView = "list";
+      listViewBtn.classList.add("active");
+      boardViewBtn.classList.remove("active");
+      renderTasks();
+    });
+
+    boardViewBtn.addEventListener("click", () => {
+      currentView = "board";
+      boardViewBtn.classList.add("active");
+      listViewBtn.classList.remove("active");
+      renderTasks();
+    });
+  }
+
 });
 
 // Feature: UI Pop-up Notification
