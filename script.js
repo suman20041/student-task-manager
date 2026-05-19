@@ -20,7 +20,11 @@ const tabContents = document.querySelectorAll(".tab-content");
 // Global states
 let tasks = [];
 let currentFilter = "All";
+
+let searchQuery = "";
+
 let currentView = "list"; // "list" or "board"
+
 let coins = 0;
 let streak = 0;
 let xp = 120;
@@ -588,6 +592,9 @@ function createTaskEl(task) {
   div.setAttribute("data-id", task.id);
   if (task.completed) {
     div.classList.add("completed");
+  }
+  if (searchQuery) {
+    filteredTasks = filteredTasks.filter(task => task.text.toLowerCase().includes(searchQuery));
   }
 
   const pri = task.priority || "Medium";
@@ -2185,6 +2192,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // Request browser notification permissions on startup
   if ("Notification" in window && Notification.permission === "default") {
     Notification.requestPermission();
+  }
+
+  // Search input logic
+  const searchInput = document.getElementById("searchInput");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      searchQuery = e.target.value.toLowerCase();
+      renderTasks();
+    });
   }
 
   loadData();

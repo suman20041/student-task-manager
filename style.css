@@ -4381,6 +4381,46 @@ body.light .drag-handle:hover {
   }
 }
 
+
+/* Search Box Styles */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  border-radius: 20px;
+  margin-bottom: 25px;
+  transition: var(--transition);
+  backdrop-filter: blur(10px);
+}
+
+.search-box:focus-within {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--primary);
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+}
+
+.search-box i {
+  color: var(--text-light);
+  font-size: 20px;
+}
+
+.search-box input {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 15px;
+  width: 100%;
+  outline: none;
+  font-family: inherit;
+}
+
+.search-box input::placeholder {
+  color: var(--text-light);
+  opacity: 0.6;
+=======
 /* ==========================================================================
    PHASE 11: PROFILE CARD & EDIT MODAL STYLING
    ========================================================================== */
@@ -4422,4 +4462,5 @@ body.light .drag-handle:hover {
   border-color: var(--primary) !important;
   background: rgba(255, 255, 255, 0.12) !important;
   box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+
 }
