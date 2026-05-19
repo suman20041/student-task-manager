@@ -739,6 +739,8 @@ function setupColumnDragOver(body) {
   });
 }
 
+
+
 function renderTasks() {
   const taskList = document.getElementById("taskList");
   const boardColumns = document.getElementById("boardColumns");
@@ -1840,6 +1842,8 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAchievements();
   renderWeeklyStreak();
   updateDisplay();
+
+
 
   // Setup dragover reordering for list container
   const taskListContainer = document.getElementById("taskList");
