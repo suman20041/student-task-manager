@@ -4811,3 +4811,173 @@ body.light .drag-handle:hover {
 
 
 
+
+/* WEEKLY PERFORMANCE SUMMARY */
+.asgn-weekly-summary {
+  margin-bottom: 24px;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.weekly-summary-body {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0 24px 24px 24px;
+}
+
+.weekly-summary-body.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.weekly-summary-grid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .weekly-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ws-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ws-score-card {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+}
+
+.ws-score-ring {
+  width: 140px;
+  height: 140px;
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.ws-score-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ws-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ws-stat-item {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ws-stat-item i {
+  font-size: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px;
+  border-radius: 10px;
+}
+
+.ws-stat-item h4 {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.ws-stat-item p {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+.ws-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ws-chart-container {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  height: 220px;
+  width: 100%;
+}
+
+.ws-subject-analysis {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.ws-subject-card {
+  min-width: 120px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.ws-subject-card h5 {
+  font-size: 13px;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+
+.ws-subject-card .sub-score {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.circular-chart {
+  display: block;
+  margin: 0 auto;
+  max-width: 80%;
+  max-height: 250px;
+}
+.circle-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 3.8;
+}
+.circle {
+  fill: none;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 1s ease-out, stroke 0.5s ease-out;
+}
+.circular-chart.primary .circle {
+  stroke: var(--primary);
+}
+.percentage {
+  fill: var(--text);
+  font-family: sans-serif;
+  font-size: 0.5em;
+  text-anchor: middle;
+  font-weight: bold;
+}
