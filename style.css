@@ -384,6 +384,54 @@ body {
     box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
   }
 }
+.notes-section {
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.notes-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.editor-toolbar button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.editor-toolbar button:hover {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+}
+
+.notes-editor {
+  min-height: 200px;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--item-bg);
+  color: var(--text-main);
+  font-size: 1rem;
+  line-height: 1.5;
+  outline: none;
+}
 
 /* POMODORO */
 
@@ -564,9 +612,7 @@ body {
   color: #06b6d4;
 }
 
-.task-deadline i {
-  font-size: 14px;
-}
+
 
 .topbar-left h2 {
   font-size: 26px;
@@ -972,19 +1018,7 @@ body.light .topbar-left h2 {
 @media(max-width: 1150px) {
 
 
-.filters {
-  display: flex;
-  gap: 12px;
 
-
-
-  flex-wrap: wrap;
-
-
-}
-
-  margin-bottom: 25px;
-}
 
 .filters {
   display: flex;
