@@ -130,43 +130,15 @@
       </div>
 
     </aside>
-    <!-- MAIN CONTENT REMOVED DUPLICATE HEADER -->
+    
 
     <!-- MAIN CONTENT -->
     <section class="main-content">
-
-
-
-      <!-- TOP BAR -->
-      <div class="topbar">
-
-        <div>
-          <h2>Dashboard</h2>
-          <p>Conquer your goals one task at a time ✨</p>
-        </div>
-
-        <button id="themeToggle">
-          <i class="ri-moon-clear-fill"></i>
-        </button>
-
-      </div>
-
-    <!-- MAIN CONTENT -->
-    <section class="main-content">
-
-      <!-- TOP BAR -->
-      <div class="topbar">
-        <div class="topbar-left">
-          <h2>Dashboard</h2>
-          <p>Conquer your goals one task at a time ✨</p>
-
-
-      <!-- TOP BAR -->
+       <!-- TOP BAR -->
       <div class="topbar">
         <div class="topbar-left">
 
-          <h2>Dashboard</h2>
-          <p>Conquer your goals one task at a time ✨</p>
+          
 
           <button class="burger-btn" id="mobileSidebarToggle" aria-label="Toggle Sidebar Menu">
             <i class="ri-menu-line"></i>
@@ -227,11 +199,7 @@
 
 
 
-              <select id="prioritySelect" title="Select priority level">
-                <option value="High">🚩 High</option>
-                <option value="Medium" selected>🔸 Medium</option>
-                <option value="Low">🔹 Low</option>
-              </select>
+              
 
               <input
                 type="datetime-local"
@@ -239,16 +207,14 @@
                 title="Set deadline for this task"
               />
               <button id="addTaskBtn">
-                <i class="ri-add-line"></i> Add Task
+                
 
               <select id="prioritySelect" aria-label="Task priority">
                 <option value="High">🔴 High</option>
                 <option value="Medium" selected>🟡 Medium</option>
                 <option value="Low">🟢 Low</option>
               </select>
-              <button id="addTaskBtn">
-                <i class="ri-add-line"></i> Add Task
-              </button>
+              
             </div>
 
             <!-- VIEW TOGGLES -->
@@ -326,32 +292,9 @@
             </div>
           </div>
 
-          <!-- Timer Sidebar -->
-          <div class="workspace-sidebar">
-            <div class="study-mode glass">
-              <h2 id="mode">Study Time</h2>
-              <div class="timer" id="timerDisplay">25:00</div>
-              <div class="buttons">
-                <button onclick="startTimer()" title="Start"><i class="ri-play-fill"></i></button>
-                <button onclick="pauseTimer()" title="Pause"><i class="ri-pause-fill"></i></button>
-                <button onclick="resetTimer()" title="Reset"><i class="ri-restart-fill"></i></button>
-              </div>
-            </div>
-          </div>
-        </div>
+          
         
-        <!-- QUICK BRAIN DUMP SCRATCHPAD -->
-        <div class="scratchpad-card glass">
-          <div class="scratchpad-header">
-            <div class="scratchpad-title">
-              <i class="ri-sticky-note-line"></i>
-              <span>Quick Brain Dump</span>
-            </div>
-            <span class="save-status" id="scratchpadStatus">Autosaved to LocalStorage</span>
-          </div>
-          <textarea id="scratchpadInput" placeholder="Jot down quick thoughts, links, ideas, or temporary tasks here..." aria-label="Scratchpad for quick thoughts"></textarea>
-        </div>
-      </div>
+        
 
       <div id="analytics-tab" class="tab-content hidden">
 
@@ -565,31 +508,24 @@
           </div>
         </div>
       </div>
+      <section class="notes-section">
+  <h2 class="notes-title">Study Notes</h2>
+  
+  <!-- Toolbar -->
+  <div class="editor-toolbar">
+    <button onclick="formatDoc('bold')"><i class="fa-solid fa-bold"></i></button>
+    <button onclick="formatDoc('italic')"><i class="fa-solid fa-italic"></i></button>
+    <button onclick="formatDoc('underline')"><i class="fa-solid fa-underline"></i></button>
+    <button onclick="formatDoc('insertUnorderedList')"><i class="fa-solid fa-list-ul"></i></button>
+    <button onclick="formatDoc('insertOrderedList')"><i class="fa-solid fa-list-ol"></i></button>
+    <button onclick="saveNotes()"><i class="fa-solid fa-save"></i> Save</button>
+  </div>
 
-      <!-- APP FOOTER -->
-      <footer class="app-footer">
-        <div class="footer-content">
-          <div class="footer-brand">
-            <div class="logo-icon"><i class="ri-gamepad-line"></i></div>
-            <div class="logo-text">
-              <h4>TaskQuest</h4>
-              <p>Conquer your goals one task at a time.</p>
-            </div>
-          </div>
-          <div class="footer-links">
-            <a href="#" aria-label="GitHub Repository"><i class="ri-github-fill"></i></a>
-            <a href="#" aria-label="Twitter"><i class="ri-twitter-x-line"></i></a>
-            <a href="#" aria-label="Discord"><i class="ri-discord-fill"></i></a>
-          </div>
-        </div>
-        <div class="footer-bottom">
-          <p>&copy; 2026 TaskQuest. All rights reserved.</p>
-          <div class="footer-legal">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-          </div>
-        </div>
-      </footer>
+  <!-- Editable Notes Area -->
+  <div id="notesEditor" class="notes-editor" contenteditable="true"></div>
+</section>
+
+      
 
     </section>
 
@@ -622,31 +558,9 @@
       <button id="closeDrawerBtn" aria-label="Close form"><i class="ri-close-line"></i></button>
     </div>
     
-    <div class="drawer-body">
-      <input
-        type="text"
-        id="mobileTaskInput"
-        placeholder="What needs to be done?"
-        aria-label="New task name"
-      />
+  
 
-      <select id="mobileCategorySelect" aria-label="Task category">
-        <option value="Theory">📘 Theory</option>
-        <option value="Practical">🧪 Practical</option>
-        <option value="Assignment">📝 Assignment</option>
-        <option value="Revision">📖 Revision</option>
-      </select>
-
-      <select id="mobilePrioritySelect" aria-label="Task priority">
-
-        <option value="High">🚩 High Priority</option>
-        <option value="Medium" selected>🔸 Medium Priority</option>
-        <option value="Low">🔹 Low Priority</option>
-
-        <option value="High">🔴 High Priority</option>
-        <option value="Medium" selected>🟡 Medium Priority</option>
-        <option value="Low">🟢 Low Priority</option>
-      </select>
+      
 
       <button id="mobileAddTaskBtn">
         <i class="ri-add-line"></i>Create Quest
@@ -777,10 +691,34 @@
   <div id="srAnnouncement" class="sr-only" aria-live="polite"></div>
 
 
-  <script src="script.js"></script>
+  
 
 </body>
-
+<!-- APP FOOTER -->
+      <footer class="app-footer">
+        <div class="footer-content">
+          <div class="footer-brand">
+            <div class="logo-icon"><i class="ri-gamepad-line"></i></div>
+            <div class="logo-text">
+              <h4>TaskQuest</h4>
+              <p>Conquer your goals one task at a time.</p>
+            </div>
+          </div>
+          <div class="footer-links">
+            <a href="#" aria-label="GitHub Repository"><i class="ri-github-fill"></i></a>
+            <a href="#" aria-label="Twitter"><i class="ri-twitter-x-line"></i></a>
+            <a href="#" aria-label="Discord"><i class="ri-discord-fill"></i></a>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>&copy; 2026 TaskQuest. All rights reserved.</p>
+          <div class="footer-legal">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+          </div>
+        </div>
+      </footer>
+<script src="script.js"></script>
 
 </html>
 
