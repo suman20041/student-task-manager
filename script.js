@@ -527,15 +527,11 @@ function addTask() {
 
 
 
-  const priority = document.getElementById("prioritySelect").value;
-
-  const deadlineInput = document.getElementById("deadlineInput");
-  const deadline = deadlineInput.value;
-
-  if (text === "") return;
-
   const prioritySelect = document.getElementById("prioritySelect");
   const priority = prioritySelect ? prioritySelect.value : "Medium";
+
+  const deadlineInput = document.getElementById("deadlineInput");
+  const deadline = deadlineInput ? deadlineInput.value : "";
 
   if (text === "") {
     taskInput.classList.add("input-invalid");
@@ -1150,11 +1146,12 @@ document.getElementById("resetTimer")?.addEventListener("click", resetTimer);
 
 tabBtns.forEach(btn => {
   btn.addEventListener("click", () => {
-    tabBtns.forEach(b => {
+    // Use live query each time to avoid stale NodeList issues
+    document.querySelectorAll(".tab-btn").forEach(b => {
       b.classList.remove("active");
       b.setAttribute("aria-selected", "false");
     });
-    tabContents.forEach(c => c.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
 
     btn.classList.add("active");
     btn.setAttribute("aria-selected", "true");
@@ -1173,6 +1170,15 @@ tabBtns.forEach(btn => {
     if (btn.dataset.tab === "analytics") {
       updateAnalyticsDashboard();
     }
+
+    // Re-render assignments on tab activation
+    if (btn.dataset.tab === "assignments") {
+      const asgnList = document.getElementById("asgnList");
+      if (asgnList) {
+        // Dispatch a custom event that the assignment tracker IIFE listens to
+        document.dispatchEvent(new CustomEvent("asgnTabActive"));
+      }
+    }
   });
 });
 
@@ -1180,12 +1186,21 @@ tabBtns.forEach(btn => {
 document.querySelectorAll(".dock-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const targetTab = btn.dataset.tab;
-    // Activate corresponding top button and content
-    tabBtns.forEach(b => {
-      if (b.dataset.tab === targetTab) {
-        b.click();
-      }
-    });
+    // Try clicking the matching top tab button
+    const topBtn = document.querySelector(`.tab-btn[data-tab="${targetTab}"]`);
+    if (topBtn) {
+      topBtn.click();
+    } else {
+      // Fallback: manually switch if top tab hidden
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      const tabEl = document.getElementById(`${targetTab}-tab`);
+      if (tabEl) tabEl.classList.add("active");
+      document.querySelectorAll(".dock-btn").forEach(db => {
+        const isCurrent = db.dataset.tab === targetTab;
+        db.classList.toggle("active", isCurrent);
+        db.setAttribute("aria-selected", isCurrent ? "true" : "false");
+      });
+    }
   });
 });
 
@@ -2019,10 +2034,6 @@ if (mobileAddTaskBtn) {
     const text = mobileTaskInput.value.trim();
     const category = mobileCategorySelect.value;
 
-    const priority = document.getElementById("mobilePrioritySelect").value;
-
-    if (text === "") return;
-
     const mobilePrioritySelect = document.getElementById("mobilePrioritySelect");
     const priority = mobilePrioritySelect ? mobilePrioritySelect.value : "Medium";
 
@@ -2574,3 +2585,409 @@ document.getElementById("quoteRefresh2")?.addEventListener("click", () => refres
 })();
 
 
+
+// ==========================================================================
+// ASSIGNMENT TRACKER
+// ==========================================================================
+
+(function () {
+  // ---- Storage key ----
+  const ASGN_KEY = "taskquest_assignments";
+
+  // ---- State ----
+  let assignments = [];
+  let asgnFilter  = "all";
+  let asgnSortBy  = "deadline";
+  let asgnSearch  = "";
+  let notifiedIds = new Set(); // track already-notified assignments
+  let dlToastHandle = null;
+
+  // ---- Load / Save ----
+  function loadAssignments() {
+    try { assignments = JSON.parse(localStorage.getItem(ASGN_KEY)) || []; }
+    catch (_) { assignments = []; }
+  }
+  function saveAssignments() {
+    localStorage.setItem(ASGN_KEY, JSON.stringify(assignments));
+  }
+
+  // ---- Helpers ----
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+  function getStatus(asgn) {
+    if (asgn.done) return "done";
+    const diff = new Date(asgn.due) - Date.now();
+    if (diff < 0) return "overdue";
+    if (diff <= 48 * 60 * 60 * 1000) return "upcoming"; // ≤ 48 h
+    return "pending";
+  }
+
+  function formatCountdown(asgn) {
+    if (asgn.done) return { label: "✔ Done", cls: "done" };
+    const diff = new Date(asgn.due) - Date.now();
+    if (diff < 0) {
+      const h = Math.floor(-diff / 3600000);
+      const d = Math.floor(h / 24);
+      return { label: d > 0 ? `${d}d overdue` : `${h}h overdue`, cls: "overdue" };
+    }
+    const h = Math.floor(diff / 3600000);
+    const d = Math.floor(h / 24);
+    const m = Math.floor((diff % 3600000) / 60000);
+    if (d > 0) return { label: `${d}d ${h % 24}h left`, cls: d <= 2 ? "due-soon" : "ok" };
+    return { label: `${h}h ${m}m left`, cls: h <= 24 ? "due-soon" : "ok" };
+  }
+
+  function formatDueDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+
+  const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 };
+
+  function sortedFiltered() {
+    let list = assignments.slice();
+
+    // Filter
+    if (asgnFilter !== "all") {
+      list = list.filter(a => {
+        const s = getStatus(a);
+        if (asgnFilter === "pending")  return s === "pending";
+        if (asgnFilter === "upcoming") return s === "upcoming";
+        if (asgnFilter === "overdue")  return s === "overdue";
+        if (asgnFilter === "done")     return s === "done";
+        return true;
+      });
+    }
+
+    // Search
+    if (asgnSearch.trim()) {
+      const q = asgnSearch.toLowerCase();
+      list = list.filter(a =>
+        a.title.toLowerCase().includes(q) || a.subject.toLowerCase().includes(q)
+      );
+    }
+
+    // Sort
+    list.sort((a, b) => {
+      if (asgnSortBy === "deadline") return new Date(a.due) - new Date(b.due);
+      if (asgnSortBy === "priority") return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+      if (asgnSortBy === "subject")  return a.subject.localeCompare(b.subject);
+      if (asgnSortBy === "added")    return b.addedAt - a.addedAt;
+      return 0;
+    });
+
+    return list;
+  }
+
+  // ---- Render Cards ----
+  function renderAssignments() {
+    const list = sortedFiltered();
+    const container = document.getElementById("asgnList");
+    if (!container) return;
+
+    updateStats();
+    renderTimeline();
+
+    if (list.length === 0) {
+      container.innerHTML = `
+        <div class="asgn-empty">
+          <i class="ri-calendar-check-line"></i>
+          <h3>No assignments here</h3>
+          <p>Add one above or change the active filter.</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = "";
+    list.forEach(asgn => {
+      const status   = getStatus(asgn);
+      const cd       = formatCountdown(asgn);
+      const dueStr   = formatDueDate(asgn.due);
+
+      const card = document.createElement("div");
+      card.className = `asgn-card priority-${asgn.priority} status-${status}`;
+      card.dataset.id = asgn.id;
+
+      const dueIconCls = status === "overdue" ? "overdue"
+                       : status === "upcoming" ? "due-soon" : "ok";
+
+      card.innerHTML = `
+        <div class="asgn-check${asgn.done ? " checked" : ""}" role="checkbox"
+             aria-checked="${asgn.done}" tabindex="0" data-check="${asgn.id}"
+             title="${asgn.done ? "Mark incomplete" : "Mark complete"}">
+          ${asgn.done ? '<i class="ri-check-line"></i>' : ""}
+        </div>
+        <div class="asgn-card-body">
+          <div class="asgn-subject-tag"><i class="ri-book-open-line"></i> ${escapeHtml(asgn.subject)}</div>
+          <div class="asgn-title">${escapeHtml(asgn.title)}</div>
+          <div class="asgn-meta-row">
+            <span class="asgn-due-label ${dueIconCls}">
+              <i class="ri-time-line"></i> ${dueStr}
+            </span>
+            <span class="asgn-countdown ${cd.cls}">${cd.label}</span>
+            <span class="asgn-priority-pill ${asgn.priority}">${asgn.priority}</span>
+          </div>
+          ${asgn.notes ? `<p class="asgn-notes-text">${escapeHtml(asgn.notes)}</p>` : ""}
+        </div>
+        <div class="asgn-card-actions">
+          <button class="asgn-action-btn del-btn" data-del="${asgn.id}" aria-label="Delete assignment" title="Delete">
+            <i class="ri-delete-bin-6-line"></i>
+          </button>
+        </div>`;
+
+      // Checkbox click
+      card.querySelector(`[data-check="${asgn.id}"]`).addEventListener("click", () => toggleDone(asgn.id));
+      card.querySelector(`[data-check="${asgn.id}"]`).addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleDone(asgn.id); }
+      });
+      // Delete click
+      card.querySelector(`[data-del="${asgn.id}"]`).addEventListener("click", () => deleteAssignment(asgn.id));
+
+      container.appendChild(card);
+    });
+  }
+
+  // ---- Stats ----
+  function updateStats() {
+    const total    = assignments.length;
+    const done     = assignments.filter(a => a.done).length;
+    const upcoming = assignments.filter(a => getStatus(a) === "upcoming").length;
+    const overdue  = assignments.filter(a => getStatus(a) === "overdue").length;
+
+    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setEl("asgnTotal",    total);
+    setEl("asgnDone",     done);
+    setEl("asgnUpcoming", upcoming);
+    setEl("asgnOverdue",  overdue);
+  }
+
+  // ---- Timeline ----
+  function renderTimeline() {
+    const grid = document.getElementById("asgnTimelineGrid");
+    const rangeEl = document.getElementById("asgnTimelineRange");
+    if (!grid) return;
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      return d;
+    });
+
+    const DAY_NAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const todayNum = today.getDate();
+
+    if (rangeEl) {
+      const last = days[days.length - 1];
+      rangeEl.textContent = `${today.toLocaleDateString("en-IN",{day:"numeric",month:"short"})} – ${last.toLocaleDateString("en-IN",{day:"numeric",month:"short"})}`;
+    }
+
+    grid.innerHTML = "";
+    days.forEach(day => {
+      const dayStart = new Date(day); dayStart.setHours(0,0,0,0);
+      const dayEnd   = new Date(day); dayEnd.setHours(23,59,59,999);
+      const isToday  = day.getDate() === todayNum && day.getMonth() === today.getMonth();
+
+      const dayAsgns = assignments.filter(a => {
+        const d = new Date(a.due);
+        return d >= dayStart && d <= dayEnd;
+      });
+
+      const cell = document.createElement("div");
+      cell.className = `asgn-tl-day${isToday ? " today" : ""}`;
+
+      let dots = dayAsgns.map(a => {
+        const cls = getStatus(a);
+        return `<div class="asgn-tl-dot ${cls === "upcoming" ? "due-soon" : cls}" title="${escapeHtml(a.title)}"></div>`;
+      }).join("");
+
+      cell.innerHTML = `
+        <span class="asgn-tl-day-name">${DAY_NAMES[day.getDay()]}</span>
+        <span class="asgn-tl-day-num">${day.getDate()}</span>
+        ${dots}
+        ${dayAsgns.length > 0 ? `<span class="asgn-tl-count">${dayAsgns.length} due</span>` : ""}`;
+
+      grid.appendChild(cell);
+    });
+  }
+
+  // ---- CRUD ----
+  function addAssignment() {
+    const titleEl    = document.getElementById("asgnTitle");
+    const subjectEl  = document.getElementById("asgnSubject");
+    const dueEl      = document.getElementById("asgnDue");
+    const priorityEl = document.getElementById("asgnPriority");
+    const notesEl    = document.getElementById("asgnNotes");
+
+    const title   = titleEl?.value.trim();
+    const subject = subjectEl?.value.trim();
+    const due     = dueEl?.value;
+    const priority= priorityEl?.value || "Medium";
+    const notes   = notesEl?.value.trim();
+
+    if (!title)   { titleEl?.focus();   return showAsgnError(titleEl,   "Enter assignment title"); }
+    if (!subject) { subjectEl?.focus(); return showAsgnError(subjectEl, "Enter subject"); }
+    if (!due)     { dueEl?.focus();     return showAsgnError(dueEl,     "Select due date"); }
+
+    assignments.unshift({
+      id: uid(), title, subject, due, priority, notes,
+      done: false, addedAt: Date.now()
+    });
+    saveAssignments();
+    renderAssignments();
+
+    // Reset form
+    if (titleEl)    titleEl.value   = "";
+    if (subjectEl)  subjectEl.value = "";
+    if (dueEl)      dueEl.value     = "";
+    if (notesEl)    notesEl.value   = "";
+    if (priorityEl) priorityEl.value = "Medium";
+
+    announce(`Assignment "${title}" added.`);
+  }
+
+  function showAsgnError(el, msg) {
+    if (!el) return;
+    el.style.borderColor = "#ef4444";
+    el.placeholder = msg;
+    setTimeout(() => { el.style.borderColor = ""; }, 1500);
+  }
+
+  function toggleDone(id) {
+    const asgn = assignments.find(a => a.id === id);
+    if (!asgn) return;
+    asgn.done = !asgn.done;
+    saveAssignments();
+    renderAssignments();
+    announce(`Assignment "${asgn.title}" marked ${asgn.done ? "complete" : "incomplete"}.`);
+  }
+
+  function deleteAssignment(id) {
+    const asgn = assignments.find(a => a.id === id);
+    if (!asgn) return;
+    assignments = assignments.filter(a => a.id !== id);
+    saveAssignments();
+    renderAssignments();
+    announce(`Assignment "${asgn.title}" deleted.`);
+  }
+
+  // ---- Deadline Reminder Toast ----
+  const dlToast     = document.getElementById("asgnDeadlineToast");
+  const dlToastMsg  = document.getElementById("asgnDlToastMsg");
+  const dlToastTitle= document.getElementById("asgnDlToastTitle");
+  const dlProgress  = document.getElementById("asgnDlProgress");
+  const dlClose     = document.getElementById("asgnDlToastClose");
+
+  function showDeadlineToast(asgn) {
+    if (!dlToast) return;
+    const cd = formatCountdown(asgn);
+    if (dlToastTitle) dlToastTitle.textContent = asgn.priority === "High" ? "🔴 Urgent Deadline!" : "📅 Assignment Due Soon!";
+    if (dlToastMsg)   dlToastMsg.textContent   = `"${asgn.title}" (${asgn.subject}) — ${cd.label}.`;
+
+    dlToast.classList.add("show");
+
+    const AUTO = 7000;
+    if (dlProgress) {
+      dlProgress.style.transition = "none";
+      dlProgress.style.transform  = "scaleX(1)";
+      dlProgress.offsetHeight; // reflow
+      dlProgress.style.transition = `transform ${AUTO}ms linear`;
+      dlProgress.style.transform  = "scaleX(0)";
+    }
+
+    clearTimeout(dlToastHandle);
+    dlToastHandle = setTimeout(() => dlToast.classList.remove("show"), AUTO);
+  }
+
+  if (dlClose) dlClose.addEventListener("click", () => {
+    dlToast?.classList.remove("show");
+    clearTimeout(dlToastHandle);
+  });
+
+  // Check for upcoming deadlines every minute
+  function checkDeadlines() {
+    const now = Date.now();
+    assignments.forEach(asgn => {
+      if (asgn.done || notifiedIds.has(asgn.id)) return;
+      const diff = new Date(asgn.due) - now;
+      // Notify if ≤ 2 hours away or overdue within last 10 min
+      if (diff <= 2 * 60 * 60 * 1000 && diff > -10 * 60 * 1000) {
+        notifiedIds.add(asgn.id);
+        showDeadlineToast(asgn);
+      }
+    });
+  }
+
+  // ---- Countdown refresh ----
+  function refreshCountdowns() {
+    const cards = document.querySelectorAll(".asgn-card[data-id]");
+    cards.forEach(card => {
+      const id   = card.dataset.id;
+      const asgn = assignments.find(a => a.id === id);
+      if (!asgn) return;
+      const cdEl = card.querySelector(".asgn-countdown");
+      if (cdEl) {
+        const cd = formatCountdown(asgn);
+        cdEl.textContent = cd.label;
+        cdEl.className   = `asgn-countdown ${cd.cls}`;
+      }
+    });
+  }
+
+  // ---- Form collapse toggle ----
+  const formToggleBtn = document.getElementById("asgnFormToggle");
+  const formBody      = document.getElementById("asgnFormBody");
+  const formHeader    = document.querySelector(".asgn-form-header");
+
+  function toggleForm() {
+    if (!formBody) return;
+    const isCollapsed = formBody.classList.contains("collapsed");
+    formBody.classList.toggle("collapsed", !isCollapsed);
+    if (formToggleBtn) formToggleBtn.classList.toggle("collapsed", !isCollapsed);
+  }
+
+  if (formToggleBtn) formToggleBtn.addEventListener("click", e => { e.stopPropagation(); toggleForm(); });
+  if (formHeader)    formHeader.addEventListener("click", () => toggleForm());
+
+  // ---- Wire up events ----
+  document.getElementById("asgnAddBtn")?.addEventListener("click", addAssignment);
+
+  document.getElementById("asgnTitle")?.addEventListener("keydown", e => {
+    if (e.key === "Enter") addAssignment();
+  });
+
+  document.querySelectorAll(".asgn-filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".asgn-filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      asgnFilter = btn.dataset.asgnFilter;
+      renderAssignments();
+    });
+  });
+
+  document.getElementById("asgnSort")?.addEventListener("change", e => {
+    asgnSortBy = e.target.value;
+    renderAssignments();
+  });
+
+  document.getElementById("asgnSearch")?.addEventListener("input", e => {
+    asgnSearch = e.target.value;
+    renderAssignments();
+  });
+
+  // ---- Init ----
+  loadAssignments();
+  renderAssignments();
+  checkDeadlines();
+
+  // Re-render when tab is activated
+  document.addEventListener("asgnTabActive", () => {
+    renderAssignments();
+  });
+
+  setInterval(refreshCountdowns, 30000);   // refresh countdowns every 30 sec
+  setInterval(checkDeadlines, 60000);      // check deadlines every 1 min
+
+})();

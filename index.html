@@ -168,6 +168,9 @@
         <button class="tab-btn" id="tabBtnAnalytics" data-tab="analytics" role="tab" aria-selected="false" aria-controls="analytics-tab">
           <i class="ri-bar-chart-2-line"></i> Analytics Hub
         </button>
+        <button class="tab-btn" id="tabBtnAssignments" data-tab="assignments" role="tab" aria-selected="false" aria-controls="assignments-tab">
+          <i class="ri-calendar-check-line"></i> Assignments
+        </button>
       </div>
       
       <!-- TAB 1: QUESTS & TIMER -->
@@ -387,9 +390,122 @@
         </div>
       </div>
 
-      <div id="analytics-tab" class="tab-content hidden">
 
-      <div id="analytics-tab" class="tab-content hidden" role="tabpanel" aria-labelledby="tabBtnAnalytics">
+      <!-- TAB 3: ASSIGNMENT TRACKER -->
+      <div id="assignments-tab" class="tab-content" role="tabpanel" aria-labelledby="tabBtnAssignments">
+
+
+        <!-- Summary Stats -->
+        <div class="asgn-stats-row">
+          <div class="asgn-stat-card glass">
+            <div class="asgn-stat-icon" style="background: rgba(99,102,241,0.15); color:#6366f1;"><i class="ri-file-list-3-line"></i></div>
+            <div><p class="asgn-stat-num" id="asgnTotal">0</p><p class="asgn-stat-lbl">Total</p></div>
+          </div>
+          <div class="asgn-stat-card glass">
+            <div class="asgn-stat-icon" style="background: rgba(16,185,129,0.15); color:#10b981;"><i class="ri-checkbox-circle-line"></i></div>
+            <div><p class="asgn-stat-num" id="asgnDone">0</p><p class="asgn-stat-lbl">Completed</p></div>
+          </div>
+          <div class="asgn-stat-card glass">
+            <div class="asgn-stat-icon" style="background: rgba(245,158,11,0.15); color:#f59e0b;"><i class="ri-time-line"></i></div>
+            <div><p class="asgn-stat-num" id="asgnUpcoming">0</p><p class="asgn-stat-lbl">Due Soon</p></div>
+          </div>
+          <div class="asgn-stat-card glass">
+            <div class="asgn-stat-icon" style="background: rgba(239,68,68,0.15); color:#ef4444;"><i class="ri-alarm-warning-line"></i></div>
+            <div><p class="asgn-stat-num" id="asgnOverdue">0</p><p class="asgn-stat-lbl">Overdue</p></div>
+          </div>
+        </div>
+
+        <!-- Add Assignment Form -->
+        <div class="asgn-form-card glass" id="asgnFormCard">
+          <div class="asgn-form-header">
+            <div class="asgn-form-title"><i class="ri-add-circle-line"></i> New Assignment</div>
+            <button class="asgn-form-toggle-btn" id="asgnFormToggle" aria-label="Collapse form"><i class="ri-chevron-up-line"></i></button>
+          </div>
+          <div class="asgn-form-body" id="asgnFormBody">
+            <div class="asgn-form-grid">
+              <div class="asgn-field">
+                <label for="asgnTitle">Assignment Title *</label>
+                <input type="text" id="asgnTitle" placeholder="e.g. Math Chapter 5 Homework" />
+              </div>
+              <div class="asgn-field">
+                <label for="asgnSubject">Subject *</label>
+                <input type="text" id="asgnSubject" placeholder="e.g. Mathematics" list="subjectSuggestions"/>
+                <datalist id="subjectSuggestions">
+                  <option value="Mathematics"/>
+                  <option value="Physics"/>
+                  <option value="Chemistry"/>
+                  <option value="Biology"/>
+                  <option value="English"/>
+                  <option value="History"/>
+                  <option value="Geography"/>
+                  <option value="Computer Science"/>
+                  <option value="Economics"/>
+                </datalist>
+              </div>
+              <div class="asgn-field">
+                <label for="asgnDue">Due Date &amp; Time *</label>
+                <input type="datetime-local" id="asgnDue" />
+              </div>
+              <div class="asgn-field">
+                <label for="asgnPriority">Priority</label>
+                <select id="asgnPriority">
+                  <option value="High">🔴 High</option>
+                  <option value="Medium" selected>🟡 Medium</option>
+                  <option value="Low">🟢 Low</option>
+                </select>
+              </div>
+              <div class="asgn-field asgn-field-full">
+                <label for="asgnNotes">Notes</label>
+                <input type="text" id="asgnNotes" placeholder="Optional details, references, or instructions…" />
+              </div>
+            </div>
+            <button class="asgn-add-btn" id="asgnAddBtn"><i class="ri-add-line"></i> Add Assignment</button>
+          </div>
+        </div>
+
+        <!-- Filter & Sort Controls -->
+        <div class="asgn-controls-bar">
+          <div class="asgn-filter-group" role="group" aria-label="Filter assignments">
+            <button class="asgn-filter-btn active" data-asgn-filter="all">All</button>
+            <button class="asgn-filter-btn" data-asgn-filter="pending">Pending</button>
+            <button class="asgn-filter-btn" data-asgn-filter="upcoming">Due Soon</button>
+            <button class="asgn-filter-btn" data-asgn-filter="overdue">Overdue</button>
+            <button class="asgn-filter-btn" data-asgn-filter="done">Done</button>
+          </div>
+          <div class="asgn-sort-wrap">
+            <i class="ri-sort-asc"></i>
+            <select id="asgnSort" aria-label="Sort assignments">
+              <option value="deadline">By Deadline</option>
+              <option value="priority">By Priority</option>
+              <option value="subject">By Subject</option>
+              <option value="added">Recently Added</option>
+            </select>
+          </div>
+          <div class="asgn-search-wrap">
+            <i class="ri-search-line"></i>
+            <input type="text" id="asgnSearch" placeholder="Search subject or title…" />
+          </div>
+        </div>
+
+        <!-- Assignment List -->
+        <div class="asgn-list" id="asgnList" aria-live="polite">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Timeline / Calendar View -->
+        <div class="asgn-timeline-card glass" id="asgnTimelineCard">
+          <div class="asgn-timeline-header">
+            <div class="asgn-tl-title"><i class="ri-calendar-line"></i> Upcoming Timeline</div>
+            <span class="asgn-tl-subtitle" id="asgnTimelineRange"></span>
+          </div>
+          <div class="asgn-timeline-grid" id="asgnTimelineGrid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <div id="analytics-tab" class="tab-content" role="tabpanel" aria-labelledby="tabBtnAnalytics">
 
         <!-- Stats summary row -->
         <div class="analytics-stats-grid">
@@ -500,12 +616,10 @@
 
 
       <!-- TAB 2: ANALYTICS HUB -->
-      <div id="analytics-tab" class="tab-content hidden">
 
 
 
       <!-- TAB 2: ANALYTICS HUB -->
-      <div id="analytics-tab" class="tab-content hidden">
 
         <!-- Consistency Heatmap & Mastery Progress List -->
 
@@ -635,6 +749,11 @@
     <button class="dock-btn active" id="dockBtnQuests" data-tab="quests" role="tab" aria-selected="true" aria-controls="quests-tab" aria-label="Open Quests workspace">
       <i class="ri-checkbox-multiple-line"></i>
       <span>Quests</span>
+    </button>
+
+    <button class="dock-btn" id="dockBtnAssignmentsMobile" data-tab="assignments" role="tab" aria-selected="false" aria-controls="assignments-tab" aria-label="Open Assignment Tracker">
+      <i class="ri-calendar-check-line"></i>
+      <span>Assign</span>
     </button>
     
     <button class="dock-btn-quick" id="mobileQuickAddBtn" aria-label="Quick Add Quest">
@@ -823,6 +942,19 @@
       </button>
     </div>
     <div class="break-toast-progress" id="breakToastProgress"></div>
+  </div>
+
+  <!-- ASSIGNMENT DEADLINE TOAST -->
+  <div class="asgn-deadline-toast" id="asgnDeadlineToast" role="alert" aria-live="assertive">
+    <div class="asgn-dl-toast-inner">
+      <div class="asgn-dl-icon"><i class="ri-alarm-warning-fill"></i></div>
+      <div class="asgn-dl-body">
+        <h4 class="asgn-dl-title" id="asgnDlToastTitle">Assignment Due Soon!</h4>
+        <p class="asgn-dl-msg" id="asgnDlToastMsg">Math Homework is due in 2 hours.</p>
+      </div>
+      <button class="asgn-dl-close" id="asgnDlToastClose" aria-label="Dismiss deadline reminder"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="asgn-dl-progress" id="asgnDlProgress"></div>
   </div>
 
 
