@@ -28,7 +28,7 @@ let coins = 0;
 let streak = 0;
 let xp = 120;
 let currentStudyView = "weekly";
-let profile = { name: "Student Hero", gender: "Male", class: "Class 10", title: "Focus Warrior ⚔️" };
+let profile = { name: "Student Hero", gender: "Male", class: "Class 10", title: "Focus Warrior ⚔️", photo: null };
 
 // Chart.js instances
 let studyChartInstance = null;
@@ -210,8 +210,9 @@ function loadData() {
     try {
       profile = JSON.parse(savedProfile);
       if (!profile.title) profile.title = "Focus Warrior ⚔️";
+      if (!profile.photo) profile.photo = null;
     } catch (e) {
-      profile = { name: "Student Hero", gender: "Male", class: "Class 10", title: "Focus Warrior ⚔️" };
+      profile = { name: "Student Hero", gender: "Male", class: "Class 10", title: "Focus Warrior ⚔️", photo: null };
     }
   }
 }
@@ -2320,14 +2321,20 @@ function renderProfile() {
   if (classEl) classEl.textContent = `${profile.class || "Class 10"} • ${profile.title}`;
 
   if (avatarImg && avatarPlaceholder) {
-    if (profile.gender === "Female") {
-      avatarImg.src = "female_avatar.svg";
+    if (profile.photo) {
+      avatarImg.src = profile.photo;
       avatarImg.style.display = "block";
       avatarPlaceholder.style.display = "none";
     } else {
-      avatarImg.src = "male_avatar.svg";
-      avatarImg.style.display = "block";
-      avatarPlaceholder.style.display = "none";
+      if (profile.gender === "Female") {
+        avatarImg.src = "female_avatar.svg";
+        avatarImg.style.display = "block";
+        avatarPlaceholder.style.display = "none";
+      } else {
+        avatarImg.src = "male_avatar.svg";
+        avatarImg.style.display = "block";
+        avatarPlaceholder.style.display = "none";
+      }
     }
   }
 }
@@ -2343,6 +2350,11 @@ document.getElementById("profileCard")?.addEventListener("click", () => {
   document.getElementById("profileInputClass").value = profile.class || "";
   document.getElementById("profileInputGender").value = profile.gender || "Male";
   document.getElementById("profileInputTitle").value = profile.title || "Focus Warrior ⚔️";
+
+  const photoInput = document.getElementById("profileInputPhoto");
+  if (photoInput) {
+    photoInput.value = "";
+  }
 
   overlay.classList.add("active");
   modal.classList.add("active");
@@ -2370,6 +2382,7 @@ document.getElementById("saveProfileBtn")?.addEventListener("click", (e) => {
   const classInput = document.getElementById("profileInputClass");
   const genderInput = document.getElementById("profileInputGender");
   const titleInput = document.getElementById("profileInputTitle");
+  const photoInput = document.getElementById("profileInputPhoto");
 
   const newName = nameInput.value.trim();
   if (newName === "") {
@@ -2384,11 +2397,29 @@ document.getElementById("saveProfileBtn")?.addEventListener("click", (e) => {
   profile.gender = genderInput.value;
   profile.title = titleInput.value;
 
-  saveData();
-  renderProfile();
-  closeProfileModal();
-  triggerConfetti();
-  announce("Profile updated successfully.");
+  if (photoInput && photoInput.files && photoInput.files[0]) {
+    const file = photoInput.files[0];
+    if (file.size > 1024 * 1024) {
+      alert("Image is too large. Please select an image under 1MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      profile.photo = ev.target.result;
+      saveData();
+      renderProfile();
+      closeProfileModal();
+      triggerConfetti();
+      announce("Profile updated successfully.");
+    };
+    reader.readAsDataURL(file);
+  } else {
+    saveData();
+    renderProfile();
+    closeProfileModal();
+    triggerConfetti();
+    announce("Profile updated successfully.");
+  }
 });
 
 // Apply formatting commands
