@@ -2697,9 +2697,6 @@ function renderExams() {
 }
 
 
-
-}
-
 // Call renderExams once data is loaded (add to window.onload block)
 window.addEventListener('load', () => {
   renderExams();
