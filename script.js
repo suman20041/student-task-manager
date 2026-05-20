@@ -527,15 +527,11 @@ function addTask() {
 
 
 
-  const priority = document.getElementById("prioritySelect").value;
-
-  const deadlineInput = document.getElementById("deadlineInput");
-  const deadline = deadlineInput.value;
-
-  if (text === "") return;
-
   const prioritySelect = document.getElementById("prioritySelect");
   const priority = prioritySelect ? prioritySelect.value : "Medium";
+
+  const deadlineInput = document.getElementById("deadlineInput");
+  const deadline = deadlineInput ? deadlineInput.value : "";
 
   if (text === "") {
     taskInput.classList.add("input-invalid");
@@ -1152,11 +1148,12 @@ document.getElementById("resetTimer")?.addEventListener("click", resetTimer);
 
 tabBtns.forEach(btn => {
   btn.addEventListener("click", () => {
-    tabBtns.forEach(b => {
+    // Use live query each time to avoid stale NodeList issues
+    document.querySelectorAll(".tab-btn").forEach(b => {
       b.classList.remove("active");
       b.setAttribute("aria-selected", "false");
     });
-    tabContents.forEach(c => c.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
 
     btn.classList.add("active");
     btn.setAttribute("aria-selected", "true");
@@ -1175,6 +1172,15 @@ tabBtns.forEach(btn => {
     if (btn.dataset.tab === "analytics") {
       updateAnalyticsDashboard();
     }
+
+    // Re-render assignments on tab activation
+    if (btn.dataset.tab === "assignments") {
+      const asgnList = document.getElementById("asgnList");
+      if (asgnList) {
+        // Dispatch a custom event that the assignment tracker IIFE listens to
+        document.dispatchEvent(new CustomEvent("asgnTabActive"));
+      }
+    }
   });
 });
 
@@ -1182,12 +1188,21 @@ tabBtns.forEach(btn => {
 document.querySelectorAll(".dock-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const targetTab = btn.dataset.tab;
-    // Activate corresponding top button and content
-    tabBtns.forEach(b => {
-      if (b.dataset.tab === targetTab) {
-        b.click();
-      }
-    });
+    // Try clicking the matching top tab button
+    const topBtn = document.querySelector(`.tab-btn[data-tab="${targetTab}"]`);
+    if (topBtn) {
+      topBtn.click();
+    } else {
+      // Fallback: manually switch if top tab hidden
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      const tabEl = document.getElementById(`${targetTab}-tab`);
+      if (tabEl) tabEl.classList.add("active");
+      document.querySelectorAll(".dock-btn").forEach(db => {
+        const isCurrent = db.dataset.tab === targetTab;
+        db.classList.toggle("active", isCurrent);
+        db.setAttribute("aria-selected", isCurrent ? "true" : "false");
+      });
+    }
   });
 });
 
@@ -2020,10 +2035,6 @@ if (mobileAddTaskBtn) {
   mobileAddTaskBtn.addEventListener("click", () => {
     const text = mobileTaskInput.value.trim();
     const category = mobileCategorySelect.value;
-
-    const priority = document.getElementById("mobilePrioritySelect").value;
-
-    if (text === "") return;
 
     const mobilePrioritySelect = document.getElementById("mobilePrioritySelect");
     const priority = mobilePrioritySelect ? mobilePrioritySelect.value : "Medium";
