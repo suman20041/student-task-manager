@@ -6766,3 +6766,69 @@ body.light .drag-handle:hover {
   text-overflow: ellipsis;
   margin-bottom: 2px;
 }
+
+/* SUBJECT MASTERY TRACKER STYLES */
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 25px;
+  margin-top: 10px;
+}
+
+.subject-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  transition: var(--transition);
+}
+
+.subject-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+.subject-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.subject-header h3 {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.topic-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.topic-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.topic-item.completed {
+  opacity: 0.6;
+}
+
+.topic-item.completed span {
+  text-decoration: line-through;
+}
+
+.add-topic-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
