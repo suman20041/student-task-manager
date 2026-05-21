@@ -29,6 +29,8 @@ let searchQuery = "";
 let currentView = "list";
 let performanceData = [];
 let timetable = [];
+let calendarEvents = [];
+let currentCalendarDate = new Date();
 let coins = 0;
 let streak = 0;
 let xp = 120;
@@ -290,6 +292,7 @@ function saveData() {
   localStorage.setItem("quests_profile", JSON.stringify(profile));
   localStorage.setItem("quests_performance", JSON.stringify(performanceData));
   localStorage.setItem("quests_timetable", JSON.stringify(timetable));
+  localStorage.setItem("quests_calendar", JSON.stringify(calendarEvents));
 }
 
 // Generate beautiful visual mock data for past 15 days if empty
@@ -1273,6 +1276,97 @@ function initTimetableNotifier() {
       renderTimetable(); // Refresh to show "NOW STUDYING" badge
     }
   }, 30000); // Check every 30 seconds
+}
+
+// ==========================================================================
+// INTERACTIVE CALENDAR SYSTEM
+// ==========================================================================
+
+function renderCalendar() {
+  const grid = document.getElementById("calendarGrid");
+  const monthYearLabel = document.getElementById("currentMonthYear");
+  if (!grid) return;
+
+  grid.innerHTML = "";
+  const year = currentCalendarDate.getFullYear();
+  const month = currentCalendarDate.getMonth();
+  
+  monthYearLabel.textContent = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentCalendarDate);
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  
+  // Fill previous month trailing days
+  const prevMonthDays = new Date(year, month, 0).getDate();
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const dayDiv = document.createElement("div");
+    dayDiv.className = "calendar-day other-month";
+    dayDiv.innerHTML = `<span class="day-number">${prevMonthDays - i}</span>`;
+    grid.appendChild(dayDiv);
+  }
+
+  // Current month days
+  const today = new Date();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dayDiv = document.createElement("div");
+    dayDiv.className = "calendar-day";
+    if (year === today.getFullYear() && month === today.getMonth() && d === today.getDate()) {
+      dayDiv.classList.add("today");
+    }
+
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dayEvents = calendarEvents.filter(e => e.date === dateStr);
+
+    dayDiv.innerHTML = `<span class="day-number">${d}</span>`;
+    dayEvents.forEach(e => {
+      const eDiv = document.createElement("div");
+      eDiv.className = "event-pill-mini";
+      eDiv.textContent = e.title;
+      dayDiv.appendChild(eDiv);
+    });
+
+    dayDiv.onclick = () => {
+      document.getElementById("eventDateInput").value = dateStr;
+      document.getElementById("eventTitleInput").focus();
+    };
+
+    grid.appendChild(dayDiv);
+  }
+}
+
+function initCalendarNotifier() {
+  setInterval(() => {
+    const now = new Date();
+    const dateStr = getFormattedDate(now);
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    let changed = false;
+    calendarEvents.forEach(ev => {
+      if (ev.date === dateStr && ev.time === timeStr && ev.lastNotified !== timeStr) {
+        showTaskPopup(`CALENDAR: ${ev.title.toUpperCase()}`);
+        sendNotification("Event Reminder 📅", `Starting now: ${ev.title}`);
+        ev.lastNotified = timeStr;
+        changed = true;
+        
+        try {
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+          audio.volume = 0.5;
+          audio.play();
+        } catch(e) {}
+      }
+
+      // Cleanup notification flag
+      if (ev.lastNotified && (ev.date !== dateStr || ev.time !== timeStr)) {
+        ev.lastNotified = null;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      saveData();
+      renderCalendar();
+    }
+  }, 30000);
 }
 
 function updateAnalyticsStreak(todayStr) {
@@ -2568,10 +2662,12 @@ document.addEventListener("DOMContentLoaded", () => {
   updateDisplay();
   renderPerformance();
   renderTimetable();
+  renderCalendar();
   renderProfile();
 
   checkOverduePenalties();
   initTimetableNotifier();
+  initCalendarNotifier();
   initDeadlineUpdater();
 
 
@@ -2681,6 +2777,36 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("ttSubjectInput").value = "";
     });
   }
+
+  // Calendar Logic
+  document.getElementById("prevMonth")?.addEventListener("click", () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+    renderCalendar();
+  });
+  document.getElementById("nextMonth")?.addEventListener("click", () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+    renderCalendar();
+  });
+
+  document.getElementById("addEventBtn")?.addEventListener("click", () => {
+    const title = document.getElementById("eventTitleInput").value.trim();
+    const date = document.getElementById("eventDateInput").value;
+    const time = document.getElementById("eventTimeInput").value;
+
+    if (!title || !date || !time) {
+      showTaskPopup("PLEASE FILL ALL EVENT DETAILS");
+      return;
+    }
+
+    calendarEvents.push({ id: Date.now(), title, date, time, lastNotified: null });
+    saveData();
+    renderCalendar();
+    showTaskPopup("EVENT ADDED TO CALENDAR");
+    
+    document.getElementById("eventTitleInput").value = "";
+    document.getElementById("eventDateInput").value = "";
+    document.getElementById("eventTimeInput").value = "";
+  });
 });
 
 // ==========================================================================

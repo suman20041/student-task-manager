@@ -6619,3 +6619,78 @@ body.light .drag-handle:hover {
   color: #10b981;
   animation: dgBounce 1s ease infinite;
 } 
+
+/* ==========================================================================
+   INTERACTIVE CALENDAR STYLES
+   ========================================================================== */
+
+.calendar-container {
+  padding: 30px;
+  border-radius: 30px;
+  border: 1px solid var(--border);
+  margin-top: 10px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.calendar-header h3 {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 15px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
+}
+
+.calendar-day {
+  aspect-ratio: 1/1;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  overflow: hidden;
+}
+
+.calendar-day:hover { background: rgba(255, 255, 255, 0.06); transform: scale(1.02); border-color: var(--primary); }
+.calendar-day.today { border-color: var(--secondary); background: rgba(6, 182, 212, 0.1); box-shadow: 0 0 15px rgba(6, 182, 212, 0.2); }
+.calendar-day.other-month { opacity: 0.2; pointer-events: none; }
+
+.day-number { font-weight: 800; margin-bottom: 6px; }
+
+.event-pill-mini {
+  background: var(--primary);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}

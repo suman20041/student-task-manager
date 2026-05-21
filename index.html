@@ -184,6 +184,9 @@
         <button class="tab-btn" id="tabBtnTimetable" data-tab="timetable" role="tab" aria-selected="false" aria-controls="timetable-tab">
           <i class="ri-calendar-todo-line"></i> Smart Timetable
         </button>
+        <button class="tab-btn" id="tabBtnCalendar" data-tab="calendar" role="tab" aria-selected="false" aria-controls="calendar-tab">
+          <i class="ri-calendar-event-line"></i> Event Calendar
+        </button>
       </div>
       
       <!-- TAB 1: QUESTS & TIMER -->
@@ -1120,6 +1123,39 @@
         </div>
       </div>
 
+      <!-- TAB 8: INTERACTIVE CALENDAR -->
+      <div id="calendar-tab" class="tab-content" role="tabpanel" aria-labelledby="tabBtnCalendar">
+        <div class="vault-header">
+          <div class="vault-title-area">
+            <h2><i class="ri-calendar-event-line"></i> Event Calendar</h2>
+            <p>Assign date-specific tasks and receive automated reminder notifications.</p>
+          </div>
+        </div>
+
+        <div class="calendar-container glass">
+          <div class="calendar-header">
+            <button class="icon-btn" id="prevMonth" aria-label="Previous Month"><i class="ri-arrow-left-s-line"></i></button>
+            <h3 id="currentMonthYear">Month Year</h3>
+            <button class="icon-btn" id="nextMonth" aria-label="Next Month"><i class="ri-arrow-right-s-line"></i></button>
+          </div>
+          <div class="calendar-weekdays">
+            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+          </div>
+          <div class="calendar-grid" id="calendarGrid">
+            <!-- Days populated by JS -->
+          </div>
+        </div>
+
+        <div class="task-box" style="margin-top: 25px; grid-template-columns: 1fr 180px 140px 150px;">
+          <input type="text" id="eventTitleInput" placeholder="Event/Task Title (e.g. Science Project Due)" />
+          <input type="date" id="eventDateInput" title="Select Date" />
+          <input type="time" id="eventTimeInput" title="Select Time" />
+          <button id="addEventBtn">
+            <i class="ri-add-line"></i> Add Event
+          </button>
+        </div>
+      </div>
+
       <!-- APP FOOTER -->
       <footer class="app-footer">
         <div class="footer-content">
@@ -1184,6 +1220,11 @@
     <button class="dock-btn" id="dockBtnTimetableMobile" data-tab="timetable" role="tab" aria-selected="false" aria-controls="timetable-tab" aria-label="Open Timetable">
       <i class="ri-calendar-todo-line"></i>
       <span>Time</span>
+    </button>
+
+    <button class="dock-btn" id="dockBtnCalendarMobile" data-tab="calendar" role="tab" aria-selected="false" aria-controls="calendar-tab" aria-label="Open Calendar">
+      <i class="ri-calendar-event-line"></i>
+      <span>Cal</span>
     </button>
     
     <button class="dock-btn" id="dockBtnBookmarksMobile" data-tab="bookmarks" role="tab" aria-selected="false" aria-controls="bookmarks-tab" aria-label="Open Bookmarks">
