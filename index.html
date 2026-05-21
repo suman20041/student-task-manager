@@ -853,6 +853,38 @@
             </div>
           </div>
         </div>
+
+        <!-- ============================================== -->
+        <!-- MASTER PROJECTS & SUBTASKS TRACKER -->
+        <!-- ============================================== -->
+        <div class="projects-tracker-section">
+          <div class="vault-header" style="margin-top: 30px; margin-bottom: 20px;">
+            <div class="vault-title-area">
+              <h2><i class="ri-list-check-3"></i> Master Projects & Milestones</h2>
+              <p>Break down your major goals into smaller, manageable subtasks.</p>
+            </div>
+            <button class="add-project-btn" id="addProjectBtn">
+              <i class="ri-add-line"></i> New Project
+            </button>
+          </div>
+
+          <!-- Quick Add Project Form (hidden by default) -->
+          <div class="glass" id="projectFormBody" style="display: none; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+              <input type="text" id="newProjectTitle" placeholder="Project Name (e.g. Finals Prep)" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text);">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+              <button class="toggle-btn" id="cancelProjectBtn" style="padding: 8px 16px;">Cancel</button>
+              <button class="toggle-btn active" id="saveProjectBtn" style="padding: 8px 16px;">Create Project</button>
+            </div>
+          </div>
+
+          <!-- Projects Grid -->
+          <div class="projects-grid" id="projectsGrid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
       </div>
 
       <!-- APP FOOTER -->

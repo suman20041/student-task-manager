@@ -22,6 +22,7 @@ const sortBtns = document.querySelectorAll(".filters .filter-btn[data-sort]");
 let tasks = [];
 let exams = [];
 let vaultFiles = [];
+let projects = [];
 let currentFilter = "All";
 let currentSort = "default";
 let searchQuery = "";
@@ -209,6 +210,16 @@ function loadData() {
     }
   }
 
+  // Load projects
+  const savedProjects = localStorage.getItem("quests_projects");
+  if (savedProjects) {
+    try {
+      projects = JSON.parse(savedProjects);
+    } catch (e) {
+      projects = [];
+    }
+  }
+
   // Load gamification points
   coins = parseInt(localStorage.getItem("coins")) || 0;
   streak = parseInt(localStorage.getItem("streak")) || 0;
@@ -249,6 +260,7 @@ function saveData() {
   localStorage.setItem("quests", JSON.stringify(tasks));
   localStorage.setItem("quests_exams", JSON.stringify(exams));
   localStorage.setItem("quests_vault", JSON.stringify(vaultFiles));
+  localStorage.setItem("quests_projects", JSON.stringify(projects));
   localStorage.setItem("coins", coins);
   localStorage.setItem("streak", streak);
   localStorage.setItem("xp", xp);
@@ -2731,11 +2743,268 @@ function renderExams() {
 
 
 
+}
+
 // Call renderExams once data is loaded (add to window.onload block)
 window.addEventListener('load', () => {
   renderExams();
   renderVault();
+  renderProjects();
 });
+
+// ==========================================================================
+// 10. MASTER PROJECTS & SUBTASKS FEATURE
+// ==========================================================================
+
+const addProjectBtn = document.getElementById("addProjectBtn");
+const projectFormBody = document.getElementById("projectFormBody");
+const cancelProjectBtn = document.getElementById("cancelProjectBtn");
+const saveProjectBtn = document.getElementById("saveProjectBtn");
+const newProjectTitleInput = document.getElementById("newProjectTitle");
+const projectsGrid = document.getElementById("projectsGrid");
+
+// Global dragging state
+let draggedSubtask = null;
+let draggedSubtaskParentId = null;
+
+if (addProjectBtn && projectFormBody) {
+  addProjectBtn.addEventListener("click", () => {
+    projectFormBody.style.display = "block";
+    newProjectTitleInput.focus();
+  });
+
+  cancelProjectBtn.addEventListener("click", () => {
+    projectFormBody.style.display = "none";
+    newProjectTitleInput.value = "";
+  });
+
+  saveProjectBtn.addEventListener("click", () => {
+    const title = newProjectTitleInput.value.trim();
+    if (!title) {
+      announce("Please enter a project name.");
+      return;
+    }
+
+    const newProject = {
+      id: Date.now(),
+      title: title,
+      subtasks: []
+    };
+
+    projects.push(newProject);
+    saveData();
+    renderProjects();
+    
+    projectFormBody.style.display = "none";
+    newProjectTitleInput.value = "";
+    announce(`Created project: ${title}`);
+  });
+}
+
+function calculateProjectProgress(subtasks) {
+  if (subtasks.length === 0) return 0;
+  const completed = subtasks.filter(st => st.completed).length;
+  return Math.round((completed / subtasks.length) * 100);
+}
+
+function toggleSubtask(projectId, subtaskId) {
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) return;
+  
+  const st = proj.subtasks.find(s => s.id === subtaskId);
+  if (!st) return;
+
+  st.completed = !st.completed;
+  saveData();
+  renderProjects();
+
+  if (st.completed) {
+    showTaskPopup("Subtask Completed! ✨");
+    announce("Subtask completed.");
+  } else {
+    announce("Subtask unchecked.");
+  }
+}
+
+function addSubtask(projectId) {
+  const inputEl = document.getElementById(`newSubtaskInput-${projectId}`);
+  if (!inputEl) return;
+  
+  const text = inputEl.value.trim();
+  if (!text) return;
+
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) return;
+
+  proj.subtasks.push({
+    id: Date.now() + Math.random().toString(36).substr(2, 5),
+    text: text,
+    completed: false
+  });
+
+  saveData();
+  renderProjects();
+}
+
+function deleteSubtask(projectId, subtaskId) {
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) return;
+
+  proj.subtasks = proj.subtasks.filter(s => s.id !== subtaskId);
+  saveData();
+  renderProjects();
+}
+
+function deleteProject(projectId) {
+  if (confirm("Are you sure you want to delete this master project?")) {
+    projects = projects.filter(p => p.id !== projectId);
+    saveData();
+    renderProjects();
+  }
+}
+
+// Drag & Drop specific to Subtasks
+function handleSubtaskDragStart(e, projectId, subtaskId) {
+  draggedSubtask = subtaskId;
+  draggedSubtaskParentId = projectId;
+  e.target.classList.add('dragging');
+  // Required for Firefox
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', subtaskId);
+}
+
+function handleSubtaskDragEnd(e) {
+  e.target.classList.remove('dragging');
+  draggedSubtask = null;
+  draggedSubtaskParentId = null;
+  
+  // Clean up any remaining drop indicators if necessary
+  const allContainers = document.querySelectorAll('.subtasks-list');
+  allContainers.forEach(c => c.style.border = "");
+}
+
+function handleSubtaskDragOver(e, projectId) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  
+  // Only allow reordering within the SAME project to prevent bugs
+  if (draggedSubtaskParentId !== projectId) return;
+
+  const container = document.getElementById(`subtaskList-${projectId}`);
+  const draggingItem = document.querySelector('.subtask-item.dragging');
+  if (!container || !draggingItem) return;
+
+  const afterElement = getDragAfterElement(container, e.clientY, '.subtask-item:not(.dragging)');
+  if (afterElement == null) {
+    container.appendChild(draggingItem);
+  } else {
+    container.insertBefore(draggingItem, afterElement);
+  }
+}
+
+function handleSubtaskDrop(e, projectId) {
+  e.preventDefault();
+  if (draggedSubtaskParentId !== projectId) return;
+
+  // Re-calculate the array order based on DOM
+  const container = document.getElementById(`subtaskList-${projectId}`);
+  if (!container) return;
+
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) return;
+
+  const newOrderIds = Array.from(container.querySelectorAll('.subtask-item')).map(item => item.dataset.subtaskId);
+  
+  // Rebuild the subtasks array based on the new order
+  const newSubtasksArray = [];
+  newOrderIds.forEach(id => {
+    const st = proj.subtasks.find(s => s.id === id);
+    if (st) newSubtasksArray.push(st);
+  });
+
+  proj.subtasks = newSubtasksArray;
+  saveData();
+  // No need to re-render immediately as the DOM is already visually updated, 
+  // but rendering ensures progress bars etc stay perfectly synced.
+  renderProjects();
+}
+
+function renderProjects() {
+  if (!projectsGrid) return;
+  projectsGrid.innerHTML = '';
+
+  if (projects.length === 0) {
+    projectsGrid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; color: var(--text-light); padding: 30px;">
+        <i class="ri-rocket-2-line" style="font-size: 3rem; opacity: 0.3;"></i>
+        <p style="margin-top: 10px;">No master projects yet. Break down a big goal today!</p>
+      </div>
+    `;
+    return;
+  }
+
+  projects.forEach(proj => {
+    const progress = calculateProjectProgress(proj.subtasks);
+    
+    const card = document.createElement("div");
+    card.className = "project-card";
+    
+    // Header & Progress
+    let html = `
+      <div class="project-header">
+        <h3>${escapeHtml(proj.title)}</h3>
+        <button class="subtask-delete-btn" style="opacity: 1;" onclick="deleteProject(${proj.id})" aria-label="Delete Project">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      </div>
+      <div class="project-progress-wrap">
+        <div class="project-progress-text">
+          <span>Progress</span>
+          <span style="font-weight: 600; color: ${progress === 100 ? '#10b981' : 'var(--text)'};">${progress}%</span>
+        </div>
+        <div class="project-progress-bar">
+          <div class="project-progress-fill" style="width: ${progress}%;"></div>
+        </div>
+      </div>
+      <div class="subtasks-list" id="subtaskList-${proj.id}">
+    `;
+
+    // Subtasks Array
+    proj.subtasks.forEach(st => {
+      html += `
+        <div class="subtask-item" data-subtask-id="${st.id}" draggable="true" 
+             ondragstart="handleSubtaskDragStart(event, ${proj.id}, '${st.id}')"
+             ondragend="handleSubtaskDragEnd(event)">
+          <i class="ri-draggable subtask-drag-handle"></i>
+          <input type="checkbox" class="subtask-checkbox" ${st.completed ? 'checked' : ''} onclick="toggleSubtask(${proj.id}, '${st.id}')">
+          <span class="subtask-text">${escapeHtml(st.text)}</span>
+          <button class="subtask-delete-btn" onclick="deleteSubtask(${proj.id}, '${st.id}')">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
+      `;
+    });
+
+    html += `
+      </div>
+      <div class="add-subtask-form">
+        <input type="text" class="add-subtask-input" id="newSubtaskInput-${proj.id}" placeholder="Add a subtask..." onkeypress="if(event.key === 'Enter') addSubtask(${proj.id})">
+        <button class="add-subtask-btn" onclick="addSubtask(${proj.id})"><i class="ri-add-line"></i></button>
+      </div>
+    `;
+
+    card.innerHTML = html;
+
+    // Attach dragover/drop to the subtask list container dynamically
+    const listContainer = card.querySelector(`#subtaskList-${proj.id}`);
+    if (listContainer) {
+      listContainer.addEventListener('dragover', (e) => handleSubtaskDragOver(e, proj.id));
+      listContainer.addEventListener('drop', (e) => handleSubtaskDrop(e, proj.id));
+    }
+
+    projectsGrid.appendChild(card);
+  });
+}
 
 // ==========================================================================
 // 9. FILES VAULT FEATURE (ATTACHMENTS & STORAGE)

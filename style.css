@@ -5741,3 +5741,219 @@ body.light .drag-handle:hover {
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   MASTER PROJECTS & SUBTASKS FEATURE
+   ========================================================================== */
+
+.add-project-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.add-project-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.project-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.project-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.project-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.project-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.project-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.project-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #3b82f6);
+  border-radius: 4px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.project-progress-text {
+  font-size: 12px;
+  color: var(--text-light);
+  display: flex;
+  justify-content: space-between;
+}
+
+.subtasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 20px; /* Drop target */
+}
+
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  cursor: grab;
+}
+
+.subtask-item:active {
+  cursor: grabbing;
+}
+
+.subtask-item.dragging {
+  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--primary);
+}
+
+.subtask-drag-handle {
+  color: var(--text-light);
+  opacity: 0.5;
+  cursor: grab;
+}
+
+.subtask-item:hover .subtask-drag-handle {
+  opacity: 1;
+}
+
+.subtask-checkbox {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.subtask-checkbox:checked {
+  background-color: #10b981;
+  border-color: #10b981;
+  transform: scale(1.1);
+}
+
+.subtask-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.subtask-text {
+  flex: 1;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.subtask-checkbox:checked + .subtask-text {
+  text-decoration: line-through;
+  color: var(--text-light);
+  opacity: 0.6;
+}
+
+.subtask-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-light);
+  opacity: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 4px;
+}
+
+.subtask-item:hover .subtask-delete-btn {
+  opacity: 1;
+}
+
+.subtask-delete-btn:hover {
+  color: #ef4444;
+}
+
+.add-subtask-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.add-subtask-input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.add-subtask-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: var(--text);
+  padding: 0 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.add-subtask-btn:hover {
+  background: var(--primary);
+}
