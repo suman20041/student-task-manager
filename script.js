@@ -27,6 +27,7 @@ let currentFilter = "All";
 let currentSort = "default";
 let searchQuery = "";
 let currentView = "list";
+let performanceData = [];
 let coins = 0;
 let streak = 0;
 let xp = 120;
@@ -254,6 +255,16 @@ function loadData() {
       profile = { name: "Student Hero", gender: "Male", class: "Class 10", title: "Focus Warrior ⚔️", photo: null };
     }
   }
+
+  // Load Performance Data
+  const savedPerformance = localStorage.getItem("quests_performance");
+  if (savedPerformance) {
+    try {
+      performanceData = JSON.parse(savedPerformance);
+    } catch (e) {
+      performanceData = [];
+    }
+  }
 }
 
 function saveData() {
@@ -266,6 +277,7 @@ function saveData() {
   localStorage.setItem("xp", xp);
   localStorage.setItem("quests_analytics", JSON.stringify(analyticsData));
   localStorage.setItem("quests_profile", JSON.stringify(profile));
+  localStorage.setItem("quests_performance", JSON.stringify(performanceData));
 }
 
 // Generate beautiful visual mock data for past 15 days if empty
@@ -1043,6 +1055,90 @@ function updateDailyQuest() {
   if (questText) {
     questText.textContent = `${completedToday} / 5`;
     if (completedToday >= 5) triggerConfetti();
+  }
+}
+
+// ==========================================================================
+// PERFORMANCE MANAGEMENT SYSTEM
+// ==========================================================================
+
+function renderPerformance() {
+  const container = document.getElementById("performanceGrid");
+  const statsContainer = document.getElementById("overallPerformanceStats");
+  if (!container) return;
+  
+  container.innerHTML = "";
+
+  if (performanceData.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="ri-medal-line"></i>
+        <h3>No Records Found</h3>
+        <p>Add your subjects and marks to visualize your academic progress.</p>
+      </div>
+    `;
+    if (statsContainer) statsContainer.innerHTML = "";
+    return;
+  }
+
+  let totalPercentage = 0;
+
+  performanceData.forEach(item => {
+    totalPercentage += item.percentage;
+    let msg = "";
+    let statusClass = "";
+
+    if (item.percentage < 45) {
+      msg = "No worry perform better next time";
+      statusClass = "low";
+    } else if (item.percentage < 80) {
+      msg = "try to go higher";
+      statusClass = "medium";
+    } else {
+      msg = "you are on right track go ahead champ";
+      statusClass = "high";
+    }
+
+    const card = document.createElement("div");
+    card.className = "performance-card glass";
+    card.innerHTML = `
+      <div class="perf-header">
+        <div class="perf-info">
+          <span class="perf-subject">${escapeHtml(item.name)}</span>
+          <p class="perf-marks">${item.obtained} / ${item.total} Marks</p>
+        </div>
+        <button class="icon-btn delete-btn" style="width: 32px; height: 32px;" onclick="deletePerformance(${item.id})">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      </div>
+      <div class="perf-body">
+        <span class="perf-percent ${statusClass}">${item.percentage.toFixed(1)}%</span>
+        <div class="perf-progress-container">
+          <div class="perf-progress-fill ${statusClass}" style="width: ${item.percentage}%"></div>
+        </div>
+        <p class="perf-msg ${statusClass}">${msg}</p>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  // Render Average Summary
+  if (statsContainer) {
+    const avg = totalPercentage / performanceData.length;
+    statsContainer.innerHTML = `
+      <div class="storage-bar"><div class="storage-fill" style="width: ${avg}%"></div></div>
+      <p id="storageText">Overall Academic Standing: <strong>${avg.toFixed(1)}%</strong></p>
+    `;
+  }
+}
+
+window.deletePerformance = (id) => {
+  if (confirm("Delete this academic record?")) {
+    performanceData = performanceData.filter(p => p.id !== id);
+    saveData();
+    renderPerformance();
+    announce("Record deleted.");
+    showTaskPopup("RECORD REMOVED");
   }
 }
 
@@ -2337,6 +2433,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAchievements();
   renderWeeklyStreak();
   updateDisplay();
+  renderPerformance();
   renderProfile();
 
   checkOverduePenalties();
@@ -2386,6 +2483,37 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Performance Add Logic
+  const addPerformanceBtn = document.getElementById("addPerformanceBtn");
+  if (addPerformanceBtn) {
+    addPerformanceBtn.addEventListener("click", () => {
+      const name = document.getElementById("subjectNameInput").value.trim();
+      const obtained = parseFloat(document.getElementById("marksObtainedInput").value);
+      const total = parseFloat(document.getElementById("totalMarksInput").value);
+
+      if (!name || isNaN(obtained) || isNaN(total) || total <= 0) {
+        showTaskPopup("INVALID MARKS ENTERED");
+        return;
+      }
+
+      const record = {
+        id: Date.now(),
+        name,
+        obtained,
+        total,
+        percentage: (obtained / total) * 100
+      };
+
+      performanceData.push(record);
+      saveData();
+      renderPerformance();
+      showTaskPopup(`${name.toUpperCase()} PERFORMANCE ADDED`);
+      
+      document.getElementById("subjectNameInput").value = "";
+      document.getElementById("marksObtainedInput").value = "";
+      document.getElementById("totalMarksInput").value = "";
+    });
+  }
 });
 
 // ==========================================================================

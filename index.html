@@ -178,6 +178,9 @@
         <button class="tab-btn" id="tabBtnBookmarks" data-tab="bookmarks" role="tab" aria-selected="false" aria-controls="bookmarks-tab">
           <i class="ri-bookmark-3-line"></i> Bookmarks
         </button>
+        <button class="tab-btn" id="tabBtnPerformance" data-tab="performance" role="tab" aria-selected="false" aria-controls="performance-tab">
+          <i class="ri-medal-line"></i> Academic Performance
+        </button>
       </div>
       
       <!-- TAB 1: QUESTS & TIMER -->
@@ -967,141 +970,6 @@
           </div>
         </div>
 
-        <!-- ============================================================ -->
-        <!-- STUDY SESSION TRACKER -->
-        <!-- ============================================================ -->
-        <div class="vault-header" style="margin-top: 40px; margin-bottom: 20px;">
-          <div class="vault-title-area">
-            <h2><i class="ri-focus-3-line"></i> Study Session Tracker</h2>
-            <p>Track your focused study sessions with subject tagging and session history.</p>
-          </div>
-        </div>
-
-        <div class="study-session-layout">
-
-          <!-- LEFT: Active Session Panel -->
-          <div class="ss-active-panel glass">
-            <!-- Subject selector -->
-            <div class="ss-subject-row">
-              <label class="ss-label"><i class="ri-book-open-line"></i> Subject</label>
-              <select id="ssSubjectSelect" class="ss-select">
-                <option value="Mathematics">📐 Mathematics</option>
-                <option value="Physics">⚛️ Physics</option>
-                <option value="Chemistry">🧪 Chemistry</option>
-                <option value="Biology">🌿 Biology</option>
-                <option value="History">📜 History</option>
-                <option value="English">✍️ English</option>
-                <option value="Computer Science">💻 Computer Science</option>
-                <option value="Other">📚 Other</option>
-              </select>
-            </div>
-
-            <!-- Mode: Pomodoro / Free -->
-            <div class="ss-mode-toggle">
-              <button class="ss-mode-btn active" id="ssModePomodoro" data-mode="pomodoro">
-                <i class="ri-timer-2-line"></i> Pomodoro
-              </button>
-              <button class="ss-mode-btn" id="ssModeFree" data-mode="free">
-                <i class="ri-timer-line"></i> Free Track
-              </button>
-            </div>
-
-            <!-- Timer Display -->
-            <div class="ss-timer-wrap">
-              <svg class="ss-ring" viewBox="0 0 160 160">
-                <defs>
-                  <linearGradient id="ssGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#6366f1"/>
-                    <stop offset="100%" stop-color="#06b6d4"/>
-                  </linearGradient>
-                </defs>
-                <circle class="ss-ring-bg" cx="80" cy="80" r="70"/>
-                <circle class="ss-ring-fill" id="ssRingFill" cx="80" cy="80" r="70"/>
-              </svg>
-              <div class="ss-timer-inner">
-                <div class="ss-timer-display" id="ssTimerDisplay">25:00</div>
-                <div class="ss-timer-label" id="ssTimerLabel">Study Time</div>
-              </div>
-            </div>
-
-            <!-- Controls -->
-            <div class="ss-controls">
-              <button class="ss-ctrl-btn ss-start" id="ssStartBtn" aria-label="Start Session">
-                <i class="ri-play-fill"></i>
-              </button>
-              <button class="ss-ctrl-btn ss-pause" id="ssPauseBtn" aria-label="Pause" disabled>
-                <i class="ri-pause-fill"></i>
-              </button>
-              <button class="ss-ctrl-btn ss-stop" id="ssStopBtn" aria-label="End & Save Session">
-                <i class="ri-stop-fill"></i>
-              </button>
-            </div>
-
-            <!-- Stats row -->
-            <div class="ss-stats-row">
-              <div class="ss-mini-stat">
-                <span id="ssTodayTotal">0m</span>
-                <span>Today</span>
-              </div>
-              <div class="ss-mini-stat">
-                <span id="ssWeekTotal">0m</span>
-                <span>This Week</span>
-              </div>
-              <div class="ss-mini-stat">
-                <span id="ssFocusScore">0</span>
-                <span>Focus Score</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- RIGHT: Session History & Reports -->
-          <div class="ss-right-col">
-
-            <!-- Report pills -->
-            <div class="ss-report-cards">
-              <div class="ss-report-pill glass">
-                <div class="ss-report-icon blue"><i class="ri-bar-chart-2-fill"></i></div>
-                <div>
-                  <div class="ss-report-val" id="ssAvgSession">0m</div>
-                  <div class="ss-report-label">Avg Session</div>
-                </div>
-              </div>
-              <div class="ss-report-pill glass">
-                <div class="ss-report-icon green"><i class="ri-trophy-fill"></i></div>
-                <div>
-                  <div class="ss-report-val" id="ssBestSession">0m</div>
-                  <div class="ss-report-label">Best Session</div>
-                </div>
-              </div>
-              <div class="ss-report-pill glass">
-                <div class="ss-report-icon orange"><i class="ri-calendar-fill"></i></div>
-                <div>
-                  <div class="ss-report-val" id="ssTotalSessions">0</div>
-                  <div class="ss-report-label">Total Sessions</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Session History Log -->
-            <div class="chart-card glass" style="flex: 1;">
-              <div class="chart-header">
-                <div class="header-left">
-                  <i class="ri-history-line"></i>
-                  <h3>Session History</h3>
-                </div>
-                <button class="toggle-btn" id="ssClearHistoryBtn" style="font-size: 12px; padding: 4px 10px;">Clear All</button>
-              </div>
-              <div class="ss-history-list" id="ssHistoryList">
-                <div class="ss-history-empty">
-                  <i class="ri-focus-3-line"></i>
-                  <p>No sessions yet. Start your first focus session!</p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
       </div>
 
       <!-- TAB 5: BOOKMARKS MANAGER -->
@@ -1191,6 +1059,32 @@
         </div>
       </div>
 
+      <!-- TAB 6: ACADEMIC PERFORMANCE -->
+      <div id="performance-tab" class="tab-content" role="tabpanel" aria-labelledby="tabBtnPerformance">
+        <div class="vault-header">
+          <div class="vault-title-area">
+            <h2><i class="ri-medal-line"></i> Subject Performance</h2>
+            <p>Track your grades and monitor your academic growth.</p>
+          </div>
+          <div class="vault-storage-info" id="overallPerformanceStats">
+            <!-- Average will be shown here -->
+          </div>
+        </div>
+
+        <div class="task-box">
+          <input type="text" id="subjectNameInput" placeholder="Subject Name (e.g. Mathematics)" />
+          <input type="number" id="marksObtainedInput" placeholder="Marks Obtained" />
+          <input type="number" id="totalMarksInput" placeholder="Total Marks" />
+          <button id="addPerformanceBtn">
+            <i class="ri-add-line"></i> Add Subject
+          </button>
+        </div>
+
+        <div class="performance-grid" id="performanceGrid">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
       <!-- APP FOOTER -->
       <footer class="app-footer">
         <div class="footer-content">
@@ -1210,8 +1104,8 @@
         <div class="footer-bottom">
           <p>&copy; 2026 TaskQuest. All rights reserved.</p>
           <div class="footer-legal">
-            <a href="privacy.html">Privacy Policy</a>
-            <a href="terms.html">Terms of Service</a>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
           </div>
         </div>
       </footer>
@@ -1245,6 +1139,11 @@
     <button class="dock-btn" id="dockBtnAnalytics" data-tab="analytics" role="tab" aria-selected="false" aria-controls="analytics-tab" aria-label="Open Stats dashboard">
       <i class="ri-bar-chart-2-line"></i>
       <span>Stats</span>
+    </button>
+
+    <button class="dock-btn" id="dockBtnPerformanceMobile" data-tab="performance" role="tab" aria-selected="false" aria-controls="performance-tab" aria-label="Open Performance Tracker">
+      <i class="ri-medal-line"></i>
+      <span>Perf</span>
     </button>
     
     <button class="dock-btn" id="dockBtnBookmarksMobile" data-tab="bookmarks" role="tab" aria-selected="false" aria-controls="bookmarks-tab" aria-label="Open Bookmarks">
@@ -1287,12 +1186,6 @@
         <option value="Medium" selected>🟡 Medium Priority</option>
         <option value="Low">🟢 Low Priority</option>
       </select>
-
-      <input
-        type="datetime-local"
-        id="mobileDeadlineInput"
-        title="Set deadline for this task"
-      />
 
       <button id="mobileAddTaskBtn">
         <i class="ri-add-line"></i>Create Quest
