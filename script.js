@@ -2893,6 +2893,37 @@ document.getElementById("profileCard")?.addEventListener("click", () => {
     photoInput.value = "";
   }
 
+  // Initialize avatar options and select current
+  const avatarOptions = document.getElementById('avatarOptions');
+  if (avatarOptions) {
+    // Mark selected if profile.photo matches one of the options
+    const imgs = avatarOptions.querySelectorAll('.avatar-option');
+    imgs.forEach(img => {
+      img.classList.remove('selected');
+      if (profile.photo && profile.photo.endsWith && profile.photo === img.dataset.src) {
+        img.classList.add('selected');
+      }
+
+      img.onclick = () => {
+        // Clear any uploaded file input
+        if (photoInput) photoInput.value = '';
+        // Set profile.photo to the selected avatar path
+        profile.photo = img.dataset.src;
+        // Update selection UI
+        imgs.forEach(i => i.classList.remove('selected'));
+        img.classList.add('selected');
+        // Update preview in the sidebar immediately
+        const avatarImg = document.getElementById('profileAvatarImg');
+        const avatarPlaceholder = document.getElementById('profileIconPlaceholder');
+        if (avatarImg) {
+          avatarImg.src = profile.photo;
+          avatarImg.style.display = 'block';
+        }
+        if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+      };
+    });
+  }
+
   overlay.classList.add("active");
   modal.classList.add("active");
   enableFocusTrap(modal);
