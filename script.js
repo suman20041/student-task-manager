@@ -3,6 +3,27 @@ const taskInput = document.getElementById("taskInput");
 const addTaskBtn = document.getElementById("addTaskBtn");
 const taskList = document.getElementById("taskList");
 const categorySelect = document.getElementById("categorySelect");
+const taskTemplate = document.getElementById("taskTemplate");
+
+// Quick templates: populate input/category/priority when a template is chosen
+if (taskTemplate) {
+  taskTemplate.addEventListener("change", () => {
+    const val = taskTemplate.value;
+    if (!val) return;
+    try {
+      const obj = JSON.parse(val);
+      taskInput.value = obj.text || "";
+      if (obj.category && categorySelect) categorySelect.value = obj.category;
+      const prioritySelect = document.getElementById("prioritySelect");
+      if (prioritySelect && obj.priority) prioritySelect.value = obj.priority;
+      taskInput.focus();
+      // Reset template selector for next use
+      taskTemplate.value = "";
+    } catch (e) {
+      console.error("Invalid template JSON", e);
+    }
+  });
+}
 
 // Sidebar metrics elements
 const totalTasks = document.getElementById("totalTasks");

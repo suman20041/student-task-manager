@@ -196,11 +196,20 @@
           <div class="workspace-main">
             <!-- ADD TASK -->
             <div class="task-box">
-              <input
-                type="text"
-                id="taskInput"
-                placeholder="Enter your next task..."
-              />
+              <div class="task-input-group" style="display:flex;gap:8px;align-items:center;">
+                <select id="taskTemplate" aria-label="Quick templates" title="Quick templates" style="border-radius:12px;padding:8px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:var(--text);">
+                  <option value="">Templates</option>
+                  <option value='{"text":"Read chapter summary","category":"Theory","priority":"Medium"}'>Read chapter</option>
+                  <option value='{"text":"Practice problem set","category":"Practical","priority":"High"}'>Practice problems</option>
+                  <option value='{"text":"Finish assignment","category":"Assignment","priority":"High"}'>Finish assignment</option>
+                  <option value='{"text":"Revision session","category":"Revision","priority":"Low"}'>Revision session</option>
+                </select>
+                <input
+                  type="text"
+                  id="taskInput"
+                  placeholder="Enter your next task..."
+                />
+              </div>
               <select id="categorySelect" aria-label="Task category">
                 <option value="Theory">📘 Theory</option>
                 <option value="Practical">🧪 Practical</option>
