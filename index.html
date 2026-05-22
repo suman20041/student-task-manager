@@ -199,11 +199,20 @@
           <div class="workspace-main">
             <!-- ADD TASK -->
             <div class="task-box">
-              <input
-                type="text"
-                id="taskInput"
-                placeholder="Enter your next task..."
-              />
+              <div class="task-input-group" style="display:flex;gap:8px;align-items:center;">
+                <select id="taskTemplate" aria-label="Quick templates" title="Quick templates" style="border-radius:12px;padding:8px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:var(--text);">
+                  <option value="">Templates</option>
+                  <option value='{"text":"Read chapter summary","category":"Theory","priority":"Medium"}'>Read chapter</option>
+                  <option value='{"text":"Practice problem set","category":"Practical","priority":"High"}'>Practice problems</option>
+                  <option value='{"text":"Finish assignment","category":"Assignment","priority":"High"}'>Finish assignment</option>
+                  <option value='{"text":"Revision session","category":"Revision","priority":"Low"}'>Revision session</option>
+                </select>
+                <input
+                  type="text"
+                  id="taskInput"
+                  placeholder="Enter your next task..."
+                />
+              </div>
               <select id="categorySelect" aria-label="Task category">
                 <option value="Theory">📘 Theory</option>
                 <option value="Practical">🧪 Practical</option>
@@ -752,6 +761,11 @@
             <i class="ri-search-line"></i>
             <input type="text" id="vaultSearch" placeholder="Search files by name..." />
           </div>
+          <div style="margin-left:10px;">
+            <button class="view-btn" id="clearVaultBtn" title="Clear all files from vault" style="background:#ef4444;color:white;">
+              <i class="ri-delete-bin-line"></i> Clear Vault
+            </button>
+          </div>
         </div>
 
         <!-- Files Grid -->
@@ -1191,20 +1205,23 @@
             <div class="logo-icon"><i class="ri-gamepad-line"></i></div>
             <div class="logo-text">
               <h4>TaskQuest</h4>
-              <p>Conquer your goals one task at a time.</p>
+              <p>Conquer your goals — one task at a time.</p>
             </div>
           </div>
           <div class="footer-links">
-            <a href="#" aria-label="GitHub Repository"><i class="ri-github-fill"></i></a>
-            <a href="#" aria-label="Twitter"><i class="ri-twitter-x-line"></i></a>
-            <a href="#" aria-label="Discord"><i class="ri-discord-fill"></i></a>
+            <a href="https://github.com/Sejal10406/student-task-manager" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository"><i class="ri-github-fill"></i></a>
+            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i class="ri-twitter-x-line"></i></a>
+            <a href="https://discord.com" target="_blank" rel="noopener noreferrer" aria-label="Discord"><i class="ri-discord-fill"></i></a>
           </div>
         </div>
         <div class="footer-bottom">
-          <p>&copy; 2026 TaskQuest. All rights reserved.</p>
+          <div class="footer-left">
+            <p id="footerCopyright">&copy; 2026 TaskQuest. All rights reserved.</p>
+            <p class="footer-credit">Made with <span class="heart">❤</span> for learners</p>
+          </div>
           <div class="footer-legal">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
+            <a href="#" title="Privacy Policy">Privacy Policy</a>
+            <a href="#" title="Terms of Service">Terms of Service</a>
           </div>
         </div>
       </footer>
@@ -1405,7 +1422,19 @@
       </div>
 
       <div class="form-group">
-        <label for="profileInputPhoto">Profile Photo (Max 1MB)</label>
+        <label>Choose an avatar</label>
+        <div class="avatar-options" id="avatarOptions">
+          <img src="male_avatar.svg" alt="Male avatar" class="avatar-option" data-src="male_avatar.svg" />
+          <img src="female_avatar.svg" alt="Female avatar" class="avatar-option" data-src="female_avatar.svg" />
+          <img src="avatar_blue.svg" alt="Blue avatar" class="avatar-option" data-src="avatar_blue.svg" />
+          <img src="avatar_green.svg" alt="Green avatar" class="avatar-option" data-src="avatar_green.svg" />
+          <img src="avatar_orange.svg" alt="Orange avatar" class="avatar-option" data-src="avatar_orange.svg" />
+          <img src="avatar_purple.svg" alt="Purple avatar" class="avatar-option" data-src="avatar_purple.svg" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="profileInputPhoto">Or upload a photo (Max 1MB)</label>
         <input type="file" id="profileInputPhoto" accept="image/*" />
       </div>
       
