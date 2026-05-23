@@ -202,9 +202,33 @@
       </div>
 
       <!-- TAB NAVIGATION -->
+
       <div class="tabs-scroll-wrapper">
         <button class="tabs-scroll-btn left" id="tabsScrollLeft" type="button" aria-label="Scroll tabs left">
           <i class="ri-arrow-left-line"></i>
+
+      <div class="nav-tabs" role="tablist">
+        <button class="tab-btn active" id="tabBtnQuests" data-tab="quests" role="tab" aria-selected="true" aria-controls="quests-tab">
+          <i class="ri-checkbox-multiple-line"></i> Quests & Workspace
+        </button>
+        <button class="tab-btn" id="tabBtnSubjectTracker" data-tab="subject-tracker" role="tab" aria-selected="false" aria-controls="subject-tracker-tab">
+          <i class="ri-book-open-line"></i> Subject Mastery
+        </button>
+        <button class="tab-btn" id="tabBtnAnalytics" data-tab="analytics" role="tab" aria-selected="false" aria-controls="analytics-tab">
+          <i class="ri-bar-chart-2-line"></i> Analytics Hub
+        </button>
+        <button class="tab-btn" id="tabBtnStreak" data-tab="streak" role="tab" aria-selected="false" aria-controls="streak-tab">
+          <i class="ri-fire-line"></i> Streak Tracker
+        </button>
+        <button class="tab-btn" id="tabBtnAssignments" data-tab="assignments" role="tab" aria-selected="false" aria-controls="assignments-tab">
+          <i class="ri-calendar-check-line"></i> Assignments
+        </button>
+        <button class="tab-btn" id="tabBtnVault" data-tab="vault" role="tab" aria-selected="false" aria-controls="vault-tab">
+          <i class="ri-folder-open-line"></i> Files Vault
+        </button>
+        <button class="tab-btn" id="tabBtnBookmarks" data-tab="bookmarks" role="tab" aria-selected="false" aria-controls="bookmarks-tab">
+          <i class="ri-bookmark-3-line"></i> Bookmarks
+
         </button>
         <div class="nav-tabs" role="tablist">
           <button class="tab-btn active" id="tabBtnQuests" data-tab="quests" role="tab" aria-selected="true" aria-controls="quests-tab">
@@ -240,6 +264,9 @@
         </div>
         <button class="tabs-scroll-btn right" id="tabsScrollRight" type="button" aria-label="Scroll tabs right">
           <i class="ri-arrow-right-line"></i>
+        </button>
+        <button class="tab-btn" id="tabBtnMotivation" data-tab="motivation" role="tab" aria-selected="false" aria-controls="motivation-tab">
+          <i class="ri-flashlight-line"></i> Motivation
         </button>
       </div>
       
@@ -823,6 +850,118 @@
 
       </div>
 
+      <!-- TAB 3.1: STREAK TRACKER -->
+      <div id="streak-tab" class="tab-content" role="tabpanel" aria-labelledby="tabBtnStreak">
+        <div class="vault-header">
+          <div class="vault-title-area">
+            <h2><i class="ri-fire-line"></i> Study Streak Tracker</h2>
+            <p>Keep your momentum with daily streak monitoring, weekly progress, and achievement rewards.</p>
+          </div>
+          <button class="add-project-btn" id="refreshStreakBtn" title="Refresh streak data">
+            <i class="ri-refresh-line"></i> Refresh Tracker
+          </button>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card glass">
+            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;"><i class="ri-fire-fill"></i></div>
+            <h3 id="streakCurrentValue">0 days</h3>
+            <p>Current streak</p>
+          </div>
+          <div class="stat-card glass">
+            <div class="stat-icon" style="background: rgba(99, 102, 241, 0.12); color: #6366f1;"><i class="ri-time-line"></i></div>
+            <h3 id="streakLongestValue">0 days</h3>
+            <p>Longest streak</p>
+          </div>
+          <div class="stat-card glass">
+            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;"><i class="ri-timer-flash-line"></i></div>
+            <h3 id="streakTodayMinutes">0 min</h3>
+            <p>Today studied</p>
+          </div>
+          <div class="stat-card glass">
+            <div class="stat-icon" style="background: rgba(236, 72, 153, 0.12); color: #ec4899;"><i class="ri-checkbox-circle-fill"></i></div>
+            <h3 id="streakGoalProgress">0%</h3>
+            <p>Goal completion</p>
+          </div>
+        </div>
+
+        <div class="daily-goals-card glass" id="streakProgressCard">
+          <div class="daily-goals-header">
+            <div class="daily-goals-title-wrap">
+              <i class="ri-pie-chart-line"></i>
+              <div>
+                <h3>Daily Progress Monitor</h3>
+                <p>Track your daily study minutes, task progress and motivation score.</p>
+              </div>
+            </div>
+            <div class="daily-goals-header-right">
+              <div class="daily-goals-streak" id="streakGoalCount" title="Daily progress count">
+                <i class="ri-checkbox-circle-line"></i>
+                <span>0 / 5</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="daily-goals-progress-wrap">
+            <div class="daily-goals-ring-container">
+              <svg class="daily-goals-ring" viewBox="0 0 80 80">
+                <circle class="dg-ring-bg" cx="40" cy="40" r="34" />
+                <circle class="dg-ring-fill" id="streakGoalFill" cx="40" cy="40" r="34" />
+              </svg>
+              <div class="daily-goals-ring-text">
+                <span id="streakGoalPercent">0%</span>
+                <span class="dg-ring-label">today</span>
+              </div>
+            </div>
+            <div class="daily-goals-stats">
+              <div class="dg-stat">
+                <span class="dg-stat-num" id="streakTasksCompleted">0</span>
+                <span class="dg-stat-label">Tasks done</span>
+              </div>
+              <div class="dg-stat">
+                <span class="dg-stat-num" id="streakGoalLeft">0</span>
+                <span class="dg-stat-label">Remaining</span>
+              </div>
+              <div class="dg-stat">
+                <span class="dg-stat-num" id="streakXpReward">+0 XP</span>
+                <span class="dg-stat-label">Reward</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="daily-goals-add-wrap" style="gap: 12px;">
+            <button class="daily-goals-add-btn" id="logStudyBtn" aria-label="Log study minutes">
+              <i class="ri-add-line"></i> Log 25 min study
+            </button>
+            <button class="daily-goals-add-btn" id="completeGoalBtn" aria-label="Mark today's goal complete">
+              <i class="ri-checkbox-circle-line"></i> Complete today's goal
+            </button>
+          </div>
+        </div>
+
+        <div class="achievement-card glass" id="streakAchievementCard">
+          <div class="section-title">
+            <i class="ri-award-line"></i>
+            <span>Achievement spotlight</span>
+          </div>
+          <div class="badges" id="streakBadgeGrid">
+            <div class="badge unlocked">🔥 Streak Builder</div>
+            <div class="badge">⚡ Focus Session</div>
+            <div class="badge">🎯 Goal Keeper</div>
+          </div>
+        </div>
+
+        <div class="glass" style="padding: 24px; border-radius: 30px;">
+          <div class="section-title" style="margin-bottom: 20px;">
+            <i class="ri-calendar-todo-line"></i>
+            <span>Weekly Study Activity</span>
+          </div>
+          <div class="streak-days" id="streakDaysGridMain">
+            <!-- Weekly streak cells populated dynamically -->
+          </div>
+        </div>
+      </div>
+
       <!-- TAB 4: FILES VAULT -->
       <div id="vault-tab" class="tab-content" role="tabpanel" aria-labelledby="tabBtnVault">
         
@@ -945,6 +1084,7 @@
           </div>
         </div>
 
+
         <div class="analytics-stats-grid">
           <div class="analytics-stat-card glass">
             <div class="stat-icon-wrapper blue">
@@ -993,6 +1133,7 @@
             </div>
           </div>
         </div>
+
 
         <div class="analytics-weekly-summary-grid">
           <div class="weekly-stat-card glass">
@@ -1408,6 +1549,93 @@
       </div>
 
       <!-- APP FOOTER -->
+      <!-- TAB: MOTIVATION -->
+      <div id="motivation-tab" class="tab-content" role="tabpanel" aria-labelledby="tabBtnMotivation">
+        <div class="motivation-page">
+          <!-- Hero Section -->
+          <section class="hero" aria-labelledby="hero-heading">
+            <div class="hero__badge">Motivation</div>
+            <h2 id="hero-heading" class="hero__title">Stay Motivated Every Day</h2>
+            <p class="hero__lead">Small consistent steps compound into extraordinary results. Use these prompts, tips, and quotes to build focus, discipline, and momentum for your studies.</p>
+            <ul class="badges badges--productivity" role="list">
+              <li class="badge"><i class="fa fa-sun"></i> Daily Inspiration</li>
+              <li class="badge"><i class="fa fa-bullseye"></i> Focus Boost</li>
+              <li class="badge"><i class="fa fa-smile"></i> Positive Mindset</li>
+            </ul>
+          </section>
+
+          <!-- Quotes Grid -->
+          <section class="quotes" aria-labelledby="quotes-heading">
+            <h3 id="quotes-heading" class="section__title">Motivational Quotes</h3>
+            <div class="quote-grid">
+              <article class="quote-card" aria-labelledby="q1-title">
+                <div class="quote-card__icon"><i class="fa fa-book-open"></i></div>
+                <blockquote class="quote" id="q1-title">"The secret of getting ahead is getting started."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Mark Twain</span><span class="quote-card__badge">Study Motivation</span></div>
+              </article>
+              <article class="quote-card" aria-labelledby="q2-title">
+                <div class="quote-card__icon"><i class="fa fa-hourglass-half"></i></div>
+                <blockquote class="quote" id="q2-title">"Discipline is choosing between what you want now and what you want most."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Abraham Lincoln</span><span class="quote-card__badge">Discipline</span></div>
+              </article>
+              <article class="quote-card" aria-labelledby="q3-title">
+                <div class="quote-card__icon"><i class="fa fa-rocket"></i></div>
+                <blockquote class="quote" id="q3-title">"Success is the sum of small efforts, repeated day in and day out."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Robert Collier</span><span class="quote-card__badge">Success Mindset</span></div>
+              </article>
+              <article class="quote-card" aria-labelledby="q4-title">
+                <div class="quote-card__icon"><i class="fa fa-repeat"></i></div>
+                <blockquote class="quote" id="q4-title">"Small disciplines repeated with consistency every day lead to great achievements."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Unknown</span><span class="quote-card__badge">Consistency</span></div>
+              </article>
+              <article class="quote-card" aria-labelledby="q5-title">
+                <div class="quote-card__icon"><i class="fa fa-lightbulb"></i></div>
+                <blockquote class="quote" id="q5-title">"I focus on progress, not perfection. Each session moves me forward."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Personal Affirmation</span><span class="quote-card__badge">Productivity</span></div>
+              </article>
+              <article class="quote-card" aria-labelledby="q6-title">
+                <div class="quote-card__icon"><i class="fa fa-brain"></i></div>
+                <blockquote class="quote" id="q6-title">"Turn setbacks into lessons; growth follows intentional reflection."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Learning Mindset</span><span class="quote-card__badge">Growth</span></div>
+              </article>
+            </div>
+          </section>
+
+          <!-- Daily Motivation Banner -->
+          <section class="daily-banner" aria-labelledby="daily-heading">
+            <h4 id="daily-heading" class="section__label">Quote of the Day</h4>
+            <div class="daily-banner__inner">
+              <div class="daily-banner__glow" aria-hidden="true"></div>
+              <blockquote class="daily-banner__quote">"Mastery begins with showing up. Do the work today and the future will thank you."</blockquote>
+              <cite class="daily-banner__author">— Elena Ramirez, Academic Coach</cite>
+            </div>
+          </section>
+
+          <!-- Productivity Tips -->
+          <section class="tips" aria-labelledby="tips-heading">
+            <h3 id="tips-heading" class="section__title">Productivity Tips</h3>
+            <div class="tips-grid">
+              <article class="tip-card"><h5 class="tip-card__title">Avoiding Distractions</h5><p class="tip-card__body">Create a dedicated study space, silence notifications, and use focused intervals (25–50 mins) followed by short breaks.</p></article>
+              <article class="tip-card"><h5 class="tip-card__title">Effective Study Methods</h5><p class="tip-card__body">Use active recall and spaced repetition. Teach back concepts to check true understanding.</p></article>
+              <article class="tip-card"><h5 class="tip-card__title">Time Management</h5><p class="tip-card__body">Prioritize tasks with an impact/effort matrix and block peak-focus time for deep work.</p></article>
+              <article class="tip-card"><h5 class="tip-card__title">Focus Improvement</h5><p class="tip-card__body">Train attention with single-task sessions, remove multi-tasking, and practice brief mindfulness before starting.</p></article>
+              <article class="tip-card"><h5 class="tip-card__title">Consistency Habits</h5><p class="tip-card__body">Build small daily rituals (study start routine, review, and reflection) to make progress automatic.</p></article>
+            </div>
+          </section>
+
+          <!-- Achievements -->
+          <section class="achievements" aria-labelledby="achieve-heading">
+            <h3 id="achieve-heading" class="section__title">Achievements</h3>
+            <div class="achievements__grid">
+              <div class="achievement-card"><div class="achievement-card__icon"><i class="fa fa-fire"></i></div><div class="achievement-card__body"><div class="achievement-card__value">12</div><div class="achievement-card__label">Day Study Streak</div></div></div>
+              <div class="achievement-card"><div class="achievement-card__icon"><i class="fa fa-check"></i></div><div class="achievement-card__body"><div class="achievement-card__value">48</div><div class="achievement-card__label">Tasks Completed</div></div></div>
+              <div class="achievement-card"><div class="achievement-card__icon"><i class="fa fa-chart-line"></i></div><div class="achievement-card__body"><div class="achievement-card__value">76%</div><div class="achievement-card__label">Weekly Progress</div></div></div>
+              <div class="achievement-card"><div class="achievement-card__icon"><i class="fa fa-clock"></i></div><div class="achievement-card__body"><div class="achievement-card__value">9.5h</div><div class="achievement-card__label">Focus Hours</div></div></div>
+            </div>
+          </section>
+        </div>
+      </div>
+
       <footer class="app-footer">
         <div class="footer-content">
           <div class="footer-brand">

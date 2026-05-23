@@ -25,6 +25,7 @@ if (taskTemplate) {
   });
 }
 
+
 // Footer enhancements: newsletter subscribe, dynamic year, back-to-top
 document.addEventListener('DOMContentLoaded', () => {
   // Dynamic year
@@ -72,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
 
 // Sidebar metrics elements
 const totalTasks = document.getElementById("totalTasks");
@@ -547,6 +549,7 @@ function toggleNotificationPanel(show) {
 
 
 // ==========================
+
 // Drag & Drop: Persist order
 // ==========================
 function enableDragAndDrop() {
@@ -2173,6 +2176,9 @@ tabBtns.forEach(btn => {
     if (btn.dataset.tab === "analytics") {
       updateAnalyticsDashboard();
     }
+    if (btn.dataset.tab === "streak") {
+      renderStreakTracker();
+    }
     if (btn.dataset.tab === "subject-tracker") {
       renderSubjectTracker();
     }
@@ -2360,46 +2366,144 @@ function triggerCoinExplosion(event) {
 // ==========================================================================
 
 function renderWeeklyStreak() {
-  const container = document.getElementById("streakDaysGrid");
-  if (!container) return;
-  container.innerHTML = "";
-
+  const containers = document.querySelectorAll(".streak-days");
+  if (!containers.length) return;
   const dayNames = ["M", "T", "W", "T", "F", "S", "S"];
   const today = new Date();
-  
-  // Find Mon date of the current week
-  const currentDayOfWeek = today.getDay(); // 0 is Sun, 1-6 Mon-Sat
+  const currentDayOfWeek = today.getDay();
   const diffToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
-  
   const monday = new Date();
   monday.setDate(today.getDate() + diffToMonday);
 
-  for (let i = 0; i < 7; i++) {
-    const loopDay = new Date(monday.getTime());
-    loopDay.setDate(monday.getDate() + i);
-    const dateStr = getFormattedDate(loopDay);
+  containers.forEach(container => {
+    container.innerHTML = "";
 
-    // Is active if completed a task or studied
-    const hasStudyMins = (analyticsData.dailyStudyMinutes[dateStr] || 0) > 0;
-    const hasCompletions = (analyticsData.completedTasksPerDay[dateStr] || 0) > 0;
-    const isActive = hasStudyMins || hasCompletions;
+    for (let i = 0; i < 7; i++) {
+      const loopDay = new Date(monday.getTime());
+      loopDay.setDate(monday.getDate() + i);
+      const dateStr = getFormattedDate(loopDay);
 
-    const cell = document.createElement("div");
-    cell.className = "streak-day-cell";
-    if (isActive) {
-      cell.classList.add("active");
+      const hasStudyMins = (analyticsData.dailyStudyMinutes[dateStr] || 0) > 0;
+      const hasCompletions = (analyticsData.completedTasksPerDay[dateStr] || 0) > 0;
+      const isActive = hasStudyMins || hasCompletions;
+
+      const cell = document.createElement("div");
+      cell.className = "streak-day-cell";
+      if (isActive) {
+        cell.classList.add("active");
+      }
+
+      cell.innerHTML = `
+        <span>${dayNames[i]}</span>
+        <div class="day-indicator">
+          ${isActive ? '<i class="ri-fire-fill"></i>' : '<i class="ri-checkbox-blank-circle-line"></i>'}
+        </div>
+      `;
+
+      container.appendChild(cell);
     }
+  });
+}
 
-    cell.innerHTML = `
-      <span>${dayNames[i]}</span>
-      <div class="day-indicator">
-        ${isActive ? '<i class="ri-fire-fill"></i>' : '<i class="ri-checkbox-blank-circle-line"></i>'}
-      </div>
-    `;
+function getTodayStreakGoal() {
+  const today = getFormattedDate(new Date());
+  const completed = analyticsData.completedTasksPerDay[today] || 0;
+  const minutes = analyticsData.dailyStudyMinutes[today] || 0;
+  return {
+    minutes,
+    completed,
+    goal: 60,
+    targetTasks: 5
+  };
+}
 
-    container.appendChild(cell);
+function updateStreakMetrics() {
+  const today = new Date();
+  let currentCount = 0;
+  let longest = analyticsData.longestStreak || 0;
+
+  for (let i = 0; i < 30; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const dateStr = getFormattedDate(date);
+    const active = (analyticsData.dailyStudyMinutes[dateStr] || 0) > 0 || (analyticsData.completedTasksPerDay[dateStr] || 0) > 0;
+
+    if (!active) break;
+    currentCount += 1;
+  }
+
+  analyticsData.currentStreak = currentCount;
+  analyticsData.longestStreak = Math.max(longest, currentCount);
+  streak = currentCount;
+  saveData();
+}
+
+function renderStreakTracker() {
+  const todayMetrics = getTodayStreakGoal();
+  const currentValue = document.getElementById("streakCurrentValue");
+  const longestValue = document.getElementById("streakLongestValue");
+  const todayMinutes = document.getElementById("streakTodayMinutes");
+  const goalProgress = document.getElementById("streakGoalProgress");
+  const goalPercent = document.getElementById("streakGoalPercent");
+  const goalFill = document.getElementById("streakGoalFill");
+  const goalCount = document.getElementById("streakGoalCount");
+  const tasksCompleted = document.getElementById("streakTasksCompleted");
+  const goalLeft = document.getElementById("streakGoalLeft");
+  const xpReward = document.getElementById("streakXpReward");
+  const streakCurrent = analyticsData.currentStreak || 0;
+  const streakLongest = analyticsData.longestStreak || 0;
+  const progressValue = Math.min(100, Math.round((todayMetrics.minutes / todayMetrics.goal) * 100));
+  const remaining = Math.max(0, todayMetrics.targetTasks - todayMetrics.completed);
+
+  if (currentValue) currentValue.textContent = `${streakCurrent} days`;
+  if (longestValue) longestValue.textContent = `${streakLongest} days`;
+  if (todayMinutes) todayMinutes.textContent = `${todayMetrics.minutes} min`;
+  if (goalProgress) goalProgress.textContent = `${progressValue}%`;
+  if (goalPercent) goalPercent.textContent = `${progressValue}%`;
+  if (goalFill) goalFill.style.strokeDasharray = `${progressValue} 100`;
+  if (goalCount) goalCount.innerHTML = `<i class="ri-checkbox-circle-line"></i> ${todayMetrics.completed} / ${todayMetrics.targetTasks}`;
+  if (tasksCompleted) tasksCompleted.textContent = todayMetrics.completed;
+  if (goalLeft) goalLeft.textContent = remaining;
+  if (xpReward) xpReward.textContent = `+${todayMetrics.completed * 20} XP`;
+
+  renderWeeklyStreak();
+  updateGamification();
+}
+
+function logStudyMinutes(minutes = 25) {
+  const today = getFormattedDate(new Date());
+  analyticsData.dailyStudyMinutes[today] = (analyticsData.dailyStudyMinutes[today] || 0) + minutes;
+  analyticsData.completedTasksPerDay[today] = Math.max(analyticsData.completedTasksPerDay[today] || 0, 1);
+  xp += 15;
+  updateStreakMetrics();
+  saveData();
+  renderStreakTracker();
+  checkAchievements();
+  announce(`Logged ${minutes} minutes of study. Keep the streak alive!`);
+}
+
+function completeDailyGoal() {
+  const today = getFormattedDate(new Date());
+  analyticsData.completedTasksPerDay[today] = Math.max(analyticsData.completedTasksPerDay[today] || 0, 5);
+  analyticsData.dailyStudyMinutes[today] = Math.max(analyticsData.dailyStudyMinutes[today] || 0, 60);
+  xp += 40;
+  updateStreakMetrics();
+  saveData();
+  renderStreakTracker();
+  checkAchievements();
+  announce("Today's goal completed — streak progress updated.");
+}
+
+function announce(message) {
+  const liveRegion = document.getElementById("liveRegion");
+  if (liveRegion) {
+    liveRegion.textContent = message;
+    setTimeout(() => {
+      liveRegion.textContent = "";
+    }, 3000);
   }
 }
+
 
 // ==========================================================================
 // 8. CHART.JS ANALYTICS GENERATOR
@@ -2429,1039 +2533,6 @@ function updateAnalyticsDashboard() {
   const rateEl = document.getElementById("analyticsCompletionRate");
   if (rateEl) rateEl.textContent = `${completionRate}%`;
 
-  const todayScoreEl = document.getElementById("analyticsDailyScore");
-  const dailyHighScoreEl = document.getElementById("analyticsDailyHighScore");
-  const bestDayEl = document.getElementById("analyticsBestProductiveDay");
-  const bestStudyRecordEl = document.getElementById("analyticsBestStudyRecord");
-
-  if (todayScoreEl) todayScoreEl.textContent = `${getTodayProductivityScore()}`;
-
-  const highScoreData = getDailyHighScore();
-  if (dailyHighScoreEl) dailyHighScoreEl.textContent = `${highScoreData.score}`;
-  if (bestDayEl) bestDayEl.textContent = highScoreData.day ? new Date(highScoreData.day).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—';
-  if (bestStudyRecordEl) {
-    const minutes = Math.round(analyticsData.productivityRecords?.highestStudyMinutes || 0);
-    bestStudyRecordEl.textContent = minutes > 0 ? `${minutes} min` : '—';
-  }
-
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  const weekStart = new Date(today);
-  weekStart.setDate(weekStart.getDate() - 6);
-  weekStart.setHours(0, 0, 0, 0);
-
-  const weeklyTasks = tasks.filter(task => {
-    if (!task.createdAt) return false;
-    const createdDate = new Date(task.createdAt);
-    return createdDate >= weekStart && createdDate <= today;
-  });
-
-  const weeklyCompleted = weeklyTasks.filter(task => task.completed).length;
-  const weeklyPending = weeklyTasks.filter(task => !task.completed).length;
-  const weeklyAvg = weeklyTasks.length ? Math.max(0, Math.round((weeklyTasks.length / 7) * 10) / 10) : 0;
-  const weeklyCompletionRate = weeklyTasks.length ? Math.round((weeklyCompleted / weeklyTasks.length) * 100) : 0;
-
-  const weeklyCompletedTasksEl = document.getElementById("weeklyCompletedTasks");
-  if (weeklyCompletedTasksEl) weeklyCompletedTasksEl.textContent = weeklyCompleted;
-  const weeklyPendingTasksEl = document.getElementById("weeklyPendingTasks");
-  if (weeklyPendingTasksEl) weeklyPendingTasksEl.textContent = weeklyPending;
-  const weeklyAvgTasksEl = document.getElementById("weeklyAvgTasks");
-  if (weeklyAvgTasksEl) weeklyAvgTasksEl.textContent = weeklyAvg;
-  const weeklyCompletionRateEl = document.getElementById("weeklyCompletionRate");
-  if (weeklyCompletionRateEl) weeklyCompletionRateEl.textContent = `${weeklyCompletionRate}%`;
-
-  // 2. Initialize or Update Chart.js instances
-  initStudyHoursChart();
-  initCategoryChart();
-  initCompletionTrendChart();
-
-  // 3. Render Heatmap and mastery stats
-  renderHeatmap();
-  renderQuestMastery();
-  
-  // 4. Render Highlights & History
-  renderFocusHistory();
-  
-  const mostProductiveDayEl = document.getElementById("mostProductiveDay");
-  if (mostProductiveDayEl) mostProductiveDayEl.textContent = calculateMostProductiveDay();
-  
-  const peakFocusHourEl = document.getElementById("peakFocusHour");
-  if (peakFocusHourEl) peakFocusHourEl.textContent = getPeakFocusHour();
-  
-  const longestFocusStreakEl = document.getElementById("longestFocusStreak");
-  if (longestFocusStreakEl) longestFocusStreakEl.textContent = `${analyticsData.longestStreak || 8} days`;
-}
-
-function initStudyHoursChart() {
-  const chartCanvas = document.getElementById("studyHoursChart");
-  if (!chartCanvas) return;
-
-  const ctx = chartCanvas.getContext("2d");
-  const dates = [];
-  const studyValues = [];
-  const today = new Date();
-
-  // Handle Weekly vs Monthly labels
-  const daysToView = currentStudyView === "weekly" ? 7 : 30;
-  for (let i = daysToView - 1; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(today.getDate() - i);
-    const dateStr = getFormattedDate(date);
-    dates.push(date.toLocaleDateString(undefined, { weekday: daysToView === 7 ? 'short' : undefined, month: 'short', day: 'numeric' }));
-    studyValues.push((analyticsData.dailyStudyMinutes[dateStr] || 0).toFixed(1));
-  }
-
-  // Get active CSS variables for chart colors
-  const textClr = isLightTheme() ? "#4b5563" : "#94a3b8";
-  const gridClr = isLightTheme() ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)";
-  const primaryClr = getComputedStyle(document.body).getPropertyValue('--primary').trim() || "#7c3aed";
-  const secondaryClr = getComputedStyle(document.body).getPropertyValue('--secondary').trim() || "#06b6d4";
-
-  if (studyChartInstance) {
-    studyChartInstance.destroy();
-  }
-
-  // Generate linear gradients for the chart
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, primaryClr);
-  gradient.addColorStop(1, secondaryClr);
-
-  studyChartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: dates,
-      datasets: [{
-        label: 'Minutes Studied',
-        data: studyValues,
-        backgroundColor: gradient,
-        borderRadius: 8,
-        hoverBackgroundColor: primaryClr
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: textClr, font: { family: 'Poppins' } }
-        },
-        y: {
-          grid: { color: gridClr },
-          ticks: { color: textClr, font: { family: 'Poppins' } }
-        }
-      }
-    }
-  });
-}
-
-function initCategoryChart() {
-  const chartCanvas = document.getElementById("categoryChart");
-  if (!chartCanvas) return;
-
-  const ctx = chartCanvas.getContext("2d");
-  
-  const labels = ["Theory 📘", "Practical 🧪", "Assignment 📝", "Revision 📖"];
-  const completedData = [
-    analyticsData.categoryStats.Theory?.completed || 0,
-    analyticsData.categoryStats.Practical?.completed || 0,
-    analyticsData.categoryStats.Assignment?.completed || 0,
-    analyticsData.categoryStats.Revision?.completed || 0
-  ];
-
-  const textClr = isLightTheme() ? "#4b5563" : "#e2e8f0";
-
-  if (categoryChartInstance) {
-    categoryChartInstance.destroy();
-  }
-
-  // Fallback visual data if no completed category items yet
-  const displayData = completedData.some(v => v > 0) ? completedData : [1, 1, 1, 1];
-
-  categoryChartInstance = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: displayData,
-        backgroundColor: ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"],
-        borderWidth: 0,
-        hoverOffset: 12
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: textClr, font: { family: 'Poppins', size: 12 }, padding: 15 }
-        }
-      },
-      cutout: '70%'
-    }
-  });
-}
-
-// Chart toggle click listeners
-document.getElementById("btnWeeklyStudy")?.addEventListener("click", () => {
-  const weekly = document.getElementById("btnWeeklyStudy");
-  const monthly = document.getElementById("btnMonthlyStudy");
-  weekly.classList.add("active");
-  weekly.setAttribute("aria-pressed", "true");
-  monthly.classList.remove("active");
-  monthly.setAttribute("aria-pressed", "false");
-  currentStudyView = "weekly";
-  initStudyHoursChart();
-});
-
-document.getElementById("btnMonthlyStudy")?.addEventListener("click", () => {
-  const weekly = document.getElementById("btnWeeklyStudy");
-  const monthly = document.getElementById("btnMonthlyStudy");
-  monthly.classList.add("active");
-  monthly.setAttribute("aria-pressed", "true");
-  weekly.classList.remove("active");
-  weekly.setAttribute("aria-pressed", "false");
-  currentStudyView = "monthly";
-  initStudyHoursChart();
-});
-
-let completionTrendView = "weekly"; // "weekly" or "monthly"
-
-function initCompletionTrendChart() {
-  const chartCanvas = document.getElementById("completionTrendChart");
-  if (!chartCanvas) return;
-
-  const ctx = chartCanvas.getContext("2d");
-  const dates = [];
-  const completionValues = [];
-  const today = new Date();
-
-  // Handle Weekly vs Monthly labels
-  const daysToView = completionTrendView === "weekly" ? 7 : 30;
-  for (let i = daysToView - 1; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(today.getDate() - i);
-    const dateStr = getFormattedDate(date);
-    dates.push(date.toLocaleDateString(undefined, { weekday: daysToView === 7 ? 'short' : undefined, month: 'short', day: 'numeric' }));
-    completionValues.push(analyticsData.completedTasksPerDay[dateStr] || 0);
-  }
-
-  const textClr = isLightTheme() ? "#4b5563" : "#94a3b8";
-  const gridClr = isLightTheme() ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)";
-  const primaryClr = getComputedStyle(document.body).getPropertyValue('--primary').trim() || "#7c3aed";
-  const secondaryClr = getComputedStyle(document.body).getPropertyValue('--secondary').trim() || "#06b6d4";
-
-  if (completionTrendChartInstance) {
-    completionTrendChartInstance.destroy();
-  }
-
-  // Generate linear gradient for the line fill
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, "rgba(6, 182, 212, 0.25)");
-  gradient.addColorStop(1, "rgba(124, 58, 237, 0.0)");
-
-  completionTrendChartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: dates,
-      datasets: [{
-        label: 'Quests Completed',
-        data: completionValues,
-        borderColor: secondaryClr,
-        backgroundColor: gradient,
-        fill: true,
-        tension: 0.4,
-        borderWidth: 3,
-        pointBackgroundColor: primaryClr,
-        pointBorderColor: "#fff",
-        pointHoverRadius: 7
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: textClr, font: { family: 'Poppins' } }
-        },
-        y: {
-          grid: { color: gridClr },
-          ticks: { 
-            color: textClr, 
-            font: { family: 'Poppins' },
-            stepSize: 1,
-            precision: 0
-          }
-        }
-      }
-    }
-  });
-}
-
-// ----- Analytics Export helpers -----
-function gatherAnalyticsData() {
-  const analytics = window.quests_analytics || {};
-  // Provide safe defaults
-  return {
-    studyMinutes: analytics.dailyStudyMinutes || [],
-    completedPerDay: analytics.completedTasksPerDay || [],
-    focusHistory: analytics.focusHistory || [],
-    currentStreak: analytics.currentStreak || 0,
-    longestStreak: analytics.longestStreak || 0,
-    generatedAt: new Date().toISOString()
-  };
-}
-
-function downloadBlob(filename, blob) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-function exportAnalyticsCSV() {
-  const data = gatherAnalyticsData();
-  let csv = 'section,metric,day,value\n';
-  // Study minutes
-  data.studyMinutes.forEach((m, i) => { csv += `study,minutes,${i+1},${m}\n`; });
-  // Completed tasks
-  data.completedPerDay.forEach((c, i) => { csv += `completed,tasks,${i+1},${c}\n`; });
-  // Focus history
-  data.focusHistory.forEach((f, i) => { csv += `focus,session,${i+1},${f.duration || f.minutes || 0}\n`; });
-  csv += `streak,current, ,${data.currentStreak}\n`;
-  csv += `streak,longest, ,${data.longestStreak}\n`;
-  csv += `generated,at, ,${data.generatedAt}\n`;
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  downloadBlob('quests_analytics_export.csv', blob);
-}
-
-function exportChartsPNG() {
-  const canvasIds = ['studyHoursChart', 'categoryChart', 'completionTrendChart'];
-  canvasIds.forEach((id) => {
-    const c = document.getElementById(id);
-    if (c && c.toDataURL) {
-      const dataUrl = c.toDataURL('image/png');
-      // trigger download
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = `${id}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    }
-  });
-}
-
-async function exportAnalyticsPDF() {
-  // Ensure jsPDF available
-  let jsPDFGlobal = window.jspdf && (window.jspdf.jsPDF || window.jspdf);
-  if (!jsPDFGlobal) {
-    // try to load UMD export
-    if (window.jspdf && window.jspdf.jsPDF) jsPDFGlobal = window.jspdf.jsPDF;
-  }
-  if (!jsPDFGlobal) {
-    console.warn('jsPDF not found; attempting dynamic load');
-    await new Promise((resolve) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-      s.onload = resolve;
-      document.head.appendChild(s);
-    });
-    jsPDFGlobal = window.jspdf && (window.jspdf.jsPDF || window.jspdf);
-  }
-  if (!jsPDFGlobal) {
-    alert('PDF export unavailable (jsPDF failed to load)');
-    return;
-  }
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  const margin = 40;
-  let y = margin;
-  doc.setFontSize(16);
-  doc.text('Quests Analytics Export', margin, y);
-  y += 22;
-  doc.setFontSize(10);
-  const data = gatherAnalyticsData();
-  doc.text(`Generated: ${data.generatedAt}`, margin, y);
-  y += 18;
-  doc.text(`Current streak: ${data.currentStreak} days`, margin, y);
-  y += 18;
-  doc.text(`Longest streak: ${data.longestStreak} days`, margin, y);
-  y += 24;
-
-  // add charts as images if present
-  const canvasIds = ['studyHoursChart', 'categoryChart', 'completionTrendChart'];
-  for (const id of canvasIds) {
-    const c = document.getElementById(id);
-    if (c && c.toDataURL) {
-      const img = c.toDataURL('image/png');
-      const imgProps = doc.getImageProperties(img);
-      const pdfWidth = doc.internal.pageSize.getWidth() - margin * 2;
-      const scale = Math.min(1, pdfWidth / imgProps.width);
-      const imgHeight = imgProps.height * scale;
-      if (y + imgHeight > doc.internal.pageSize.getHeight() - margin) {
-        doc.addPage();
-        y = margin;
-      }
-      doc.addImage(img, 'PNG', margin, y, pdfWidth, imgHeight);
-      y += imgHeight + 12;
-    }
-  }
-
-  doc.save('quests_analytics_export.pdf');
-}
-
-// Chart toggle click listeners for completion trend
-document.getElementById("btnWeeklyTrend")?.addEventListener("click", () => {
-  const weekly = document.getElementById("btnWeeklyTrend");
-  const monthly = document.getElementById("btnMonthlyTrend");
-  weekly.classList.add("active");
-  weekly.setAttribute("aria-pressed", "true");
-  monthly.classList.remove("active");
-  monthly.setAttribute("aria-pressed", "false");
-  completionTrendView = "weekly";
-  initCompletionTrendChart();
-});
-
-document.getElementById("btnMonthlyTrend")?.addEventListener("click", () => {
-  const weekly = document.getElementById("btnWeeklyTrend");
-  const monthly = document.getElementById("btnMonthlyTrend");
-  monthly.classList.add("active");
-  monthly.setAttribute("aria-pressed", "true");
-  weekly.classList.remove("active");
-  weekly.setAttribute("aria-pressed", "false");
-  completionTrendView = "monthly";
-  initCompletionTrendChart();
-});
-
-function renderFocusHistory() {
-  const container = document.getElementById("focusHistoryList");
-  if (!container) return;
-  container.innerHTML = "";
-
-  const history = analyticsData.focusHistory || [];
-  if (history.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state enhanced-empty" id="focusEmpty">
-        <svg width="140" height="90" viewBox="0 0 140 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <linearGradient id="g3" x1="0" x2="1">
-              <stop offset="0" stop-color="#f59e0b" />
-              <stop offset="1" stop-color="#f43f5e" />
-            </linearGradient>
-          </defs>
-          <rect x="8" y="18" width="124" height="54" rx="8" fill="url(#g3)" opacity="0.12" />
-          <path d="M28 40h84v6H28z" fill="#fff" opacity="0.06" />
-          <circle cx="110" cy="56" r="10" fill="url(#g3)" />
-        </svg>
-        <h3>No Focus Sessions Yet</h3>
-        <p class="muted">Track study sessions with the Pomodoro timer to build momentum.</p>
-        <div class="empty-cta-row">
-          <button class="view-btn primary" id="ctaStartSession">Start Focus Session</button>
-          <button class="view-btn" id="ctaCreateTaskFromHistory">Create Task</button>
-        </div>
-      </div>
-    `;
-    // Attach CTA handlers after inserting
-    setTimeout(() => {
-      const startBtn = document.getElementById('ctaStartSession');
-      const createBtn = document.getElementById('ctaCreateTaskFromHistory');
-      if (startBtn) startBtn.addEventListener('click', () => { startTimer(); });
-      if (createBtn) createBtn.addEventListener('click', () => { document.getElementById('taskInput').focus(); });
-    }, 0);
-    return;
-  }
-
-  // Render in reverse chronological order (newest first)
-  [...history].reverse().forEach(session => {
-    const item = document.createElement("div");
-    item.className = "history-item";
-    
-    const date = new Date(session.timestamp);
-    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const dayStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    
-    // Check if it's today or yesterday or older
-    const todayStr = new Date().toDateString();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toDateString();
-    
-    let displayTime = `${dayStr}, ${timeStr}`;
-    if (date.toDateString() === todayStr) {
-      displayTime = `Today, ${timeStr}`;
-    } else if (date.toDateString() === yesterdayStr) {
-      displayTime = `Yesterday, ${timeStr}`;
-    }
-    
-    item.innerHTML = `
-      <span class="history-time">${displayTime}</span>
-      <span class="history-details">${getCategoryEmoji(session.category)} Studied ${session.category} for ${session.duration} mins</span>
-      <span class="history-reward">+${session.rewardXp} XP</span>
-    `;
-    container.appendChild(item);
-  });
-}
-
-function calculateMostProductiveDay() {
-  const daySums = [0, 0, 0, 0, 0, 0, 0]; // Sun-Sat
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  
-  // Sum completed tasks per weekday
-  Object.keys(analyticsData.completedTasksPerDay).forEach(dateStr => {
-    const date = new Date(dateStr);
-    const dayOfWeek = date.getDay();
-    if (!isNaN(dayOfWeek)) {
-      daySums[dayOfWeek] += analyticsData.completedTasksPerDay[dateStr] || 0;
-    }
-  });
-  
-  let maxIdx = 2; // Default to Tuesday/Wednesday if no data
-  let maxVal = 0;
-  for (let i = 0; i < 7; i++) {
-    if (daySums[i] > maxVal) {
-      maxVal = daySums[i];
-      maxIdx = i;
-    }
-  }
-  
-  return dayNames[maxIdx];
-}
-
-function getPeakFocusHour() {
-  const hours = ["9 AM - 11 AM", "2 PM - 4 PM", "4 PM - 6 PM", "7 PM - 9 PM"];
-  const index = (xp + coins) % hours.length;
-  return hours[index];
-}
-
-// ==========================================================================
-// 9. GITHUB CONSISTENCY HEATMAP GENERATOR
-// ==========================================================================
-
-function renderHeatmap() {
-  const container = document.getElementById("heatmapContainer");
-  if (!container) return;
-  container.innerHTML = "";
-
-  const today = new Date();
-  const weeksToDisplay = 15;
-  const daysToDisplay = weeksToDisplay * 7;
-  
-  // Align start date to the beginning of the week
-  const startDate = new Date();
-  startDate.setDate(today.getDate() - daysToDisplay + 1);
-
-  // Generate grid items
-  for (let i = 0; i < daysToDisplay; i++) {
-    const day = new Date(startDate.getTime());
-    day.setDate(startDate.getDate() + i);
-    const dateStr = getFormattedDate(day);
-
-    const studyMinutes = analyticsData.dailyStudyMinutes[dateStr] || 0;
-    const completedTasks = analyticsData.completedTasksPerDay[dateStr] || 0;
-    
-    // Overall activity metric
-    const activityScore = Math.round(studyMinutes + (completedTasks * 12));
-    
-    let level = 0;
-    if (activityScore > 0) {
-      if (activityScore <= 15) level = 1;
-      else if (activityScore <= 35) level = 2;
-      else if (activityScore <= 65) level = 3;
-      else level = 4;
-    }
-
-    const dayBlock = document.createElement("div");
-    dayBlock.classList.add("heatmap-day", `level-${level}`);
-    
-    // Readable date for tooltip
-    const formattedDate = day.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-    const tooltipText = `${formattedDate}: ${studyMinutes.toFixed(1)} mins study, ${completedTasks} completed quests`;
-    dayBlock.setAttribute("data-tooltip", tooltipText);
-
-    container.appendChild(dayBlock);
-  }
-}
-
-// ==========================================================================
-// 10. QUEST MASTERY PROGRESS LIST
-// ==========================================================================
-
-function renderQuestMastery() {
-  const container = document.getElementById("subjectProgressList");
-  if (!container) return;
-  container.innerHTML = "";
-
-  const categories = ["Theory", "Practical", "Assignment", "Revision"];
-  const progressClasses = ["theory", "practical", "assignment", "revision"];
-
-  categories.forEach((cat, index) => {
-    const stats = analyticsData.categoryStats[cat] || { created: 0, completed: 0 };
-    const created = stats.created || 0;
-    const completed = stats.completed || 0;
-    
-    const percentage = created > 0 ? Math.round((completed / created) * 100) : 0;
-    const barClass = progressClasses[index];
-
-    const progressRow = document.createElement("div");
-    progressRow.classList.add("subject-progress-item");
-    progressRow.innerHTML = `
-      <div class="subject-info-row">
-        <span class="subject-name">${getCategoryEmoji(cat)} ${cat}</span>
-        <span class="subject-ratio"><span>${completed}</span> / ${created} completed</span>
-      </div>
-      <div class="subject-bar-container">
-        <div class="subject-bar-fill ${barClass}" style="width: ${percentage}%"></div>
-      </div>
-    `;
-
-    container.appendChild(progressRow);
-  });
-}
-
-// ==========================================================================
-// DEADLINE TRACKER FUNCTIONS
-// ==========================================================================
-
-function getTimeUntilDeadline(deadlineString) {
-  if (!deadlineString) return null;
-  
-  const deadline = new Date(deadlineString).getTime();
-  const now = Date.now();
-  const diff = deadline - now;
-
-  if (diff < 0) {
-    return { 
-      formatted: "OVERDUE", 
-      minutes: 0, 
-      urgency: "critical" 
-    };
-  }
-
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  let formatted = "";
-  if (days > 0) {
-    formatted = `${days}d ${hours % 24}h`;
-  } else if (hours > 0) {
-    formatted = `${hours}h ${minutes % 60}m`;
-  } else {
-    formatted = `${minutes}m`;
-  }
-
-  const urgency = diff < 7200000 ? "critical" : (diff < 86400000 ? "warning" : "normal");
-
-  return { formatted, minutes, urgency };
-}
-
-function getDeadlineUrgency(deadlineString) {
-  if (!deadlineString) return "";
-  const urgencyData = getTimeUntilDeadline(deadlineString);
-  return urgencyData ? urgencyData.urgency : "";
-}
-
-function formatDeadlineDisplay(deadlineString) {
-  if (!deadlineString) return "";
-  const urgencyData = getTimeUntilDeadline(deadlineString);
-  return urgencyData ? urgencyData.formatted + " left" : "";
-}
-
-function updateDeadlineAlerts() {
-  const container = document.getElementById("deadlineAlerts");
-  if (!container) return;
-
-  const now = Date.now();
-  const urgentTasks = tasks
-    .filter(task => task.deadline && !task.completed)
-    .filter(task => {
-      const deadline = new Date(task.deadline).getTime();
-      const diff = deadline - now;
-      return diff < 86400000; // 24 hours
-    })
-    .sort((a, b) => {
-      const aDeadline = new Date(a.deadline).getTime();
-      const bDeadline = new Date(b.deadline).getTime();
-      return aDeadline - bDeadline;
-    });
-
-  container.innerHTML = "";
-
-  if (urgentTasks.length === 0) {
-    return;
-  }
-
-  urgentTasks.slice(0, 3).forEach(task => {
-    const urgencyData = getTimeUntilDeadline(task.deadline);
-    const alertDiv = document.createElement("div");
-    alertDiv.classList.add("deadline-alert");
-    if (urgencyData.urgency !== "normal") {
-      alertDiv.classList.add("warning");
-    }
-
-
-    // Send browser notification for tasks reaching critical urgency
-    if (urgencyData.urgency === "critical") {
-      sendNotification("Urgent Deadline!", `COMPLETE ${task.text} TASK ASAP`);
-      addNotification({ type: 'deadline', title: `Deadline: ${task.text}`, body: `${urgencyData.formatted} left`, ref: `task-deadline-${task.id}` });
-    }
-
-
-    const icon = urgencyData.urgency === "critical" ? "ri-alarm-warning-fill" : "ri-time-line";
-    
-    alertDiv.innerHTML = `
-      <i class="${icon}"></i>
-      <div class="alert-content">
-        <strong>${escapeHtml(task.text)}</strong>
-        <p>${urgencyData.formatted}</p>
-      </div>
-    `;
-
-    container.appendChild(alertDiv);
-  });
-}
-
-function sortByDeadline() {
-  const now = Date.now();
-  
-  tasks.sort((a, b) => {
-    const aDeadline = a.deadline ? new Date(a.deadline).getTime() : Infinity;
-    const bDeadline = b.deadline ? new Date(b.deadline).getTime() : Infinity;
-    
-    if (aDeadline === Infinity && bDeadline === Infinity) return 0;
-    if (aDeadline === Infinity) return 1;
-    if (bDeadline === Infinity) return -1;
-    
-    return aDeadline - bDeadline;
-  });
-
-  currentFilter = "All";
-  renderTasks();
-}
-
-/**
- * Automatically deducts 10 points (coins) for tasks that pass their deadline 
- * without being completed.
- */
-function checkOverduePenalties() {
-  const now = Date.now();
-  let changed = false;
-
-  tasks.forEach(task => {
-    // Only penalize if it has a deadline, isn't done, and hasn't been penalized yet
-    if (task.deadline && !task.completed && !task.penaltyApplied) {
-      const deadlineTime = new Date(task.deadline).getTime();
-      
-      if (now > deadlineTime) {
-        coins = Math.max(0, coins - 10);
-        task.penaltyApplied = true;
-        changed = true;
-        
-        showTaskPopup(`DEADLINE MISSED: -10 PTS FOR "${task.text.toUpperCase()}"`);
-        announce(`Deadline missed for task ${task.text}. 10 points deducted.`);
-      }
-    }
-  });
-
-  if (changed) {
-    saveData();
-    updateGamification();
-  }
-}
-
-// Initialize deadline update interval
-function initDeadlineUpdater() {
-  updateDeadlineAlerts();
-  setInterval(() => {
-    checkOverduePenalties();
-    updateDeadlineAlerts();
-    renderTasks();
-  }, 60000); // Update every minute
-}
-
-// ==========================================================================
-// 11. ADVANCED RESPONSIVENESS AND COLLAPSIBLE SIDEBAR MENU
-// ==========================================================================
-
-const sidebar = document.querySelector(".sidebar");
-const sidebarOverlay = document.createElement("div");
-sidebarOverlay.className = "sidebar-overlay";
-document.body.appendChild(sidebarOverlay);
-
-const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
-
-function toggleSidebar(show) {
-  if (show) {
-    sidebar.classList.add("open");
-    sidebarOverlay.classList.add("active");
-    enableFocusTrap(sidebar);
-  } else {
-    sidebar.classList.remove("open");
-    sidebarOverlay.classList.remove("active");
-    disableFocusTrap();
-  }
-}
-
-if (mobileSidebarToggle) {
-  mobileSidebarToggle.addEventListener("click", () => toggleSidebar(true));
-}
-sidebarOverlay.addEventListener("click", () => toggleSidebar(false));
-
-// ==========================================================================
-// 12. MOBILE FLOATING QUICK ADD Form Controllers
-// ==========================================================================
-
-const mobileAddDrawer = document.getElementById("mobileAddDrawer");
-const mobileAddDrawerOverlay = document.getElementById("mobileAddDrawerOverlay");
-const mobileQuickAddBtn = document.getElementById("mobileQuickAddBtn");
-const closeDrawerBtn = document.getElementById("closeDrawerBtn");
-const mobileAddTaskBtn = document.getElementById("mobileAddTaskBtn");
-const mobileTaskInput = document.getElementById("mobileTaskInput");
-const mobileCategorySelect = document.getElementById("mobileCategorySelect");
-
-function toggleMobileDrawer(show) {
-  if (show) {
-    mobileAddDrawer.classList.add("open");
-    mobileAddDrawerOverlay.classList.add("active");
-    enableFocusTrap(mobileAddDrawer);
-    setTimeout(() => mobileTaskInput.focus(), 150); // Auto-focus on drawer slide up
-  } else {
-    mobileAddDrawer.classList.remove("open");
-    mobileAddDrawerOverlay.classList.remove("active");
-    disableFocusTrap();
-  }
-}
-
-if (mobileQuickAddBtn) {
-  mobileQuickAddBtn.addEventListener("click", () => toggleMobileDrawer(true));
-}
-if (closeDrawerBtn) {
-  closeDrawerBtn.addEventListener("click", () => toggleMobileDrawer(false));
-}
-if (mobileAddDrawerOverlay) {
-  mobileAddDrawerOverlay.addEventListener("click", () => toggleMobileDrawer(false));
-}
-
-// Create new quest from mobile form
-if (mobileAddTaskBtn) {
-  mobileAddTaskBtn.addEventListener("click", () => {
-    const text = mobileTaskInput.value.trim();
-    const category = mobileCategorySelect.value;
-
-    const mobilePrioritySelect = document.getElementById("mobilePrioritySelect");
-    const priority = mobilePrioritySelect ? mobilePrioritySelect.value : "Medium";
-
-    const mobileDeadlineInput = document.getElementById("mobileDeadlineInput");
-    const deadline = mobileDeadlineInput ? mobileDeadlineInput.value : "";
-
-    if (text === "") {
-      mobileTaskInput.classList.add("input-invalid");
-      mobileTaskInput.setAttribute("aria-invalid", "true");
-      announce("Failed to add task. Please enter a task description.");
-      setTimeout(() => {
-        mobileTaskInput.classList.remove("input-invalid");
-      }, 400);
-      return;
-    }
-    mobileTaskInput.setAttribute("aria-invalid", "false");
-
-
-    const task = {
-      id: Date.now(),
-      text,
-      category,
-      priority,
-      completed: false,
-      createdAt: getFormattedDateTime(new Date()),
-      deadline: deadline || null,
-      penaltyApplied: false
-    };
-
-    tasks.push(task);
-    mobileTaskInput.value = "";
-    if (mobileDeadlineInput) mobileDeadlineInput.value = "";
-
-    if (!analyticsData.categoryStats[category]) {
-      analyticsData.categoryStats[category] = { created: 0, completed: 0 };
-    }
-    analyticsData.categoryStats[category].created += 1;
-
-    saveData();
-    renderTasks();
-
-    // Notify user to complete the new task ASAP (Mobile)
-    sendNotification("Quest Assigned", `COMPLETE ${text} TASK ASAP`);
-
-    // Show UI popup notification (Mobile)
-    showTaskPopup(`COMPLETE ${text.toUpperCase()} TASK ASAP`);
-
-    toggleMobileDrawer(false); // Hide overlay
-    announce(`Task added: "${text}". Category: ${category}, Priority: ${priority}.`);
-  });
-}
-
-// ==========================================================================
-// 13. ACCESSIBILITY COMPLIANCE KEYBOARD SHORTCUTS
-// ==========================================================================
-
-document.addEventListener("keydown", e => {
-  // Focus main input or open mobile input form on Alt + N or Alt + A
-  if (e.altKey && (e.key.toLowerCase() === 'n' || e.key.toLowerCase() === 'a')) {
-    e.preventDefault();
-    if (window.innerWidth <= 900) {
-      toggleMobileDrawer(true);
-    } else {
-      taskInput.focus();
-    }
-  }
-
-  // Switch to workspace tab on Alt + 1
-  if (e.altKey && e.key === '1') {
-    e.preventDefault();
-    const tabBtnQuests = document.querySelector('[data-tab="quests"]');
-    if (tabBtnQuests) tabBtnQuests.click();
-  }
-
-  // Switch to analytics dashboard on Alt + 2
-  if (e.altKey && e.key === '2') {
-    e.preventDefault();
-    const tabBtnAnalytics = document.querySelector('[data-tab="analytics"]');
-    if (tabBtnAnalytics) tabBtnAnalytics.click();
-  }
-
-  // Alt + Space to start/pause Study Timer
-  if (e.altKey && e.code === 'Space') {
-    e.preventDefault();
-    if (timer) {
-      pauseTimer();
-      alert("Timer Paused");
-    } else {
-      startTimer();
-      alert("Timer Started");
-    }
-  }
-
-  // Escape to close active mobile sidebar or slide drawers
-  if (e.key === 'Escape') {
-    toggleSidebar(false);
-    toggleMobileDrawer(false);
-  }
-});
-
-// ==========================================================================
-// 14. INTERACTIVE SYSTEM INITIALIZATIONS
-// ==========================================================================
-
-// Filter Button routers
-filterBtns.forEach(btn => {
-  btn.addEventListener("click", () => {
-    filterBtns.forEach(b => {
-      b.classList.remove("active");
-      b.setAttribute("aria-pressed", "false");
-    });
-    btn.classList.add("active");
-    btn.setAttribute("aria-pressed", "true");
-    currentFilter = btn.dataset.filter;
-    renderTasks();
-  });
-});
-
-// Sort Button Event Listeners
-sortBtns.forEach(btn => {
-  btn.addEventListener("click", () => {
-    sortBtns.forEach(b => {
-      b.classList.remove("active");
-      b.setAttribute("aria-pressed", "false");
-    });
-    btn.classList.add("active");
-    btn.setAttribute("aria-pressed", "true");
-    currentSort = btn.dataset.sort;
-    renderTasks();
-  });
-});
-
-// Logic to clear all tasks at once
-const resetTasksBtn = document.getElementById("resetTasksBtn");
-if (resetTasksBtn) {
-  resetTasksBtn.addEventListener("click", () => {
-    if (confirm("Are you sure you want to clear all quests? This action cannot be undone.")) {
-      tasks = [];
-      saveData();
-      renderTasks();
-      updateGamification();
-      announce("All tasks have been cleared successfully.");
-    }
-  });
-}
-
-// Theme selection dot selectors click listeners
-document.querySelectorAll(".theme-dot").forEach(dot => {
-  dot.addEventListener("click", () => {
-    setTheme(dot.dataset.theme);
-  });
-});
-
-// Main Keypress triggers
-taskInput.addEventListener("keypress", e => {
-  if (e.key === "Enter") {
-    addTask();
-  }
-});
-
-addTaskBtn.addEventListener("click", addTask);
-
-// Deadline filter button
-const sortByDeadlineBtn = document.getElementById("sortByDeadline");
-if (sortByDeadlineBtn) {
-  sortByDeadlineBtn.addEventListener("click", () => {
-    sortByDeadline();
-  });
-}
-
-// Dom Loaded
-document.addEventListener("DOMContentLoaded", () => {
-  // Request browser notification permissions on startup
-  if ("Notification" in window && Notification.permission === "default") {
-    Notification.requestPermission();
-  }
-
-  // Search input logic
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
-      searchQuery = e.target.value.toLowerCase();
-      renderTasks();
-    });
-  }
-
-  loadData();
-  updateGamification();
-  renderTasks();
-  renderAchievements();
-  renderWeeklyStreak();
-  updateDisplay();
-  renderPerformance();
-  renderFocusHistory();
-  renderTimetable();
-  renderCalendar();
-  renderProfile();
-  renderSubjectTracker();
-
   // Notifications init
   loadNotifications();
   renderNotificationPanel();
@@ -3478,6 +2549,21 @@ document.addEventListener("DOMContentLoaded", () => {
       toggleNotificationPanel();
     });
   }
+
+
+  loadData();
+  updateStreakMetrics();
+  updateGamification();
+  renderTasks();
+  renderAchievements();
+  renderWeeklyStreak();
+  renderStreakTracker();
+  updateDisplay();
+  renderPerformance();
+  renderTimetable();
+  renderCalendar();
+  renderProfile();
+  renderSubjectTracker();
 
   // Close panel if clicking outside
   document.addEventListener('click', (e) => {
@@ -3527,6 +2613,98 @@ document.addEventListener("DOMContentLoaded", () => {
   if (exportCsvBtn) exportCsvBtn.addEventListener('click', (e) => { e.stopPropagation(); exportAnalyticsCSV(); exportMenu.style.display='none'; });
   if (exportPngBtn) exportPngBtn.addEventListener('click', (e) => { e.stopPropagation(); exportChartsPNG(); exportMenu.style.display='none'; });
   if (exportPdfBtn) exportPdfBtn.addEventListener('click', (e) => { e.stopPropagation(); exportAnalyticsPDF(); exportMenu.style.display='none'; });
+
+
+  // Notifications init
+  loadNotifications();
+  renderNotificationPanel();
+  updateNotificationBadge();
+
+  const bell = document.getElementById('notificationBell');
+  const panel = document.getElementById('notificationPanel');
+  const markAllBtn = document.getElementById('markAllReadBtn');
+  const clearAllBtn = document.getElementById('clearAllNotifBtn');
+
+  if (bell) {
+    bell.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNotificationPanel();
+    });
+  }
+
+  // Close panel if clicking outside
+  document.addEventListener('click', (e) => {
+    if (!panel) return;
+    const target = e.target;
+    if (!panel.contains(target) && !bell.contains(target)) {
+      panel.style.display = 'none';
+      if (bell) bell.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  if (markAllBtn) markAllBtn.addEventListener('click', () => markAllRead());
+  if (clearAllBtn) clearAllBtn.addEventListener('click', () => clearAllNotifications());
+
+  // Notifications init
+  loadNotifications();
+  renderNotificationPanel();
+  updateNotificationBadge();
+
+  const bell = document.getElementById('notificationBell');
+  const panel = document.getElementById('notificationPanel');
+  const markAllBtn = document.getElementById('markAllReadBtn');
+  const clearAllBtn = document.getElementById('clearAllNotifBtn');
+
+  if (bell) {
+    bell.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNotificationPanel();
+    });
+  }
+
+  // Close panel if clicking outside
+  document.addEventListener('click', (e) => {
+    if (!panel) return;
+    const target = e.target;
+    if (!panel.contains(target) && !bell.contains(target)) {
+      panel.style.display = 'none';
+      if (bell) bell.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  if (markAllBtn) markAllBtn.addEventListener('click', () => markAllRead());
+  if (clearAllBtn) clearAllBtn.addEventListener('click', () => clearAllNotifications());
+
+  // CTA wiring for empty states
+  const ctaCreateTask = document.getElementById('ctaCreateTask');
+  if (ctaCreateTask) ctaCreateTask.addEventListener('click', () => { document.getElementById('taskInput').focus(); });
+
+  const ctaBrowseTemplates = document.getElementById('ctaBrowseTemplates');
+  if (ctaBrowseTemplates) ctaBrowseTemplates.addEventListener('click', () => { document.getElementById('taskTemplate').focus(); });
+
+  const ctaUploadFiles = document.getElementById('ctaUploadFiles');
+  if (ctaUploadFiles) ctaUploadFiles.addEventListener('click', () => { document.getElementById('vaultFileInput').click(); });
+
+  const vaultBrowseBtnSmall = document.getElementById('vaultBrowseBtnSmall');
+  if (vaultBrowseBtnSmall) vaultBrowseBtnSmall.addEventListener('click', () => { document.getElementById('vaultFileInput').click(); });
+
+  const ctaAddSubject = document.getElementById('ctaAddSubject');
+  if (ctaAddSubject) ctaAddSubject.addEventListener('click', () => { const s = document.getElementById('subjectInputForm'); if (s) { s.style.display='grid'; s.querySelector('input')?.focus(); } });
+>>>>>>> 054ebbbb9cecb4be9ec267ac3d1e445c31708ce6
+
+  document.getElementById("logStudyBtn")?.addEventListener("click", () => {
+    logStudyMinutes(25);
+  });
+
+  document.getElementById("completeGoalBtn")?.addEventListener("click", () => {
+    completeDailyGoal();
+  });
+
+  document.getElementById("refreshStreakBtn")?.addEventListener("click", () => {
+    updateStreakMetrics();
+    renderStreakTracker();
+    announce("Study streak tracker refreshed.");
+  });
 
   // Footer: set dynamic year and small accessibility tweaks
   const footerCopyright = document.getElementById('footerCopyright');
@@ -3920,6 +3098,11 @@ function showTaskPopup(message) {
     popup.classList.remove("show");
     setTimeout(() => popup.remove(), 600);
   }, 3500);
+
+
+}
+
+
 }
 
 // ==========================================================================
@@ -3975,11 +3158,16 @@ if (addExamBtn) {
 
     saveData();
     renderExams();
+
     renderCalendar();
     announce(`Added exam: ${title}`);
 
     // Add notification for new exam tracked
     addNotification({ type: 'exam', title: `Exam tracked: ${title}`, body: `${subject} — ${new Date(exam.date).toLocaleString()}`, ref: `exam-${exam.id}` });
+
+
+    announce(`Added exam: ${title}`);
+
 
     // Clear form
     document.getElementById("examTitle").value = "";
@@ -4049,7 +3237,9 @@ function updateExamsCountdown() {
       // Trigger notification once if < 24h
       if (!notifiedExams.has(exam.id)) {
         sendNotification("Urgent Exam!", `${exam.title} is in less than 24 hours!`);
+
         addNotification({ type: 'exam', title: `Exam soon: ${exam.title}`, body: `${exam.subject} in <24 hours`, ref: `exam-urgent-${exam.id}` });
+
         notifiedExams.add(exam.id);
       }
     } else if (timeDiff < 3 * 24 * 60 * 60 * 1000) {
@@ -4614,6 +3804,7 @@ function renderVault() {
 
     vaultFilesGrid.appendChild(card);
   });
+
 }
 
   // ----------------------
@@ -4761,3 +3952,10 @@ function renderVault() {
     if (boardBtn) boardBtn.addEventListener('click', () => setTimeout(updateSyllabusVisibility, 100));
     if (listBtn) listBtn.addEventListener('click', () => setTimeout(updateSyllabusVisibility, 100));
   });
+
+
+}
+
+}
+
+
