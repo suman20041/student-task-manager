@@ -25,6 +25,56 @@ if (taskTemplate) {
   });
 }
 
+
+// Footer enhancements: newsletter subscribe, dynamic year, back-to-top
+document.addEventListener('DOMContentLoaded', () => {
+  // Dynamic year
+  try {
+    const yearEl = document.getElementById('footerCopyright');
+    if (yearEl) {
+      const yr = new Date().getFullYear();
+      yearEl.innerHTML = `&copy; ${yr} TaskQuest. All rights reserved.`;
+    }
+  } catch(e){}
+
+  // Newsletter subscribe
+  const subscribeBtn = document.getElementById('subscribeBtn');
+  const emailInput = document.getElementById('footerEmail');
+  const subscribeMsg = document.getElementById('subscribeMsg');
+  if (subscribeBtn && emailInput) {
+    subscribeBtn.addEventListener('click', () => {
+      const email = emailInput.value.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        subscribeMsg.textContent = 'Please enter a valid email address.';
+        subscribeMsg.style.color = '#f97316';
+        return;
+      }
+      try {
+        const stored = JSON.parse(localStorage.getItem('newsletter_subscribers') || '[]');
+        if (!stored.includes(email)) stored.push(email);
+        localStorage.setItem('newsletter_subscribers', JSON.stringify(stored));
+        subscribeMsg.textContent = 'Thanks — you are subscribed!';
+        subscribeMsg.style.color = '#10b981';
+        emailInput.value = '';
+        setTimeout(() => subscribeMsg.textContent = '', 4000);
+      } catch (e) {
+        subscribeMsg.textContent = 'Subscription failed. Please try again.';
+        subscribeMsg.style.color = '#ef4444';
+      }
+    });
+  }
+
+  // Back to top behavior
+  const backBtn = document.getElementById('backToTopBtn');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 220) backBtn.classList.add('show'); else backBtn.classList.remove('show');
+    });
+  }
+});
+
+
 // Sidebar metrics elements
 const totalTasks = document.getElementById("totalTasks");
 const completedTasks = document.getElementById("completedTasks");
@@ -57,6 +107,7 @@ let coins = 0;
 let streak = 0;
 let xp = 120;
 let currentStudyView = "weekly";
+let currentCalendarView = 'month';
 let profile = { name: "Student Hero", gender: "Male", class: "Class 10", title: "Focus Warrior ⚔️", photo: null };
 
 // Chart.js instances
@@ -68,6 +119,7 @@ let completionTrendChartInstance = null;
 let analyticsData = {
   dailyStudyMinutes: {},       // e.g. { "2026-05-18": 45.5 }
   completedTasksPerDay: {},    // e.g. { "2026-05-18": 3 }
+  dailyScoreHistory: {},       // e.g. { "2026-05-18": 240 }
   categoryStats: {
     Theory: { created: 0, completed: 0 },
     Practical: { created: 0, completed: 0 },
@@ -77,6 +129,13 @@ let analyticsData = {
   longestStreak: 0,
   currentStreak: 0,
   lastActiveDate: null,
+  productivityRecords: {
+    highestScore: 0,
+    bestProductiveDay: null,
+    highestTasksInDay: 0,
+    highestStudyMinutes: 0,
+    bestStudyDay: null
+  },
   unlockedAchievements: [],    // e.g. ["novice", "spark"]
   unlockedMilestones: []       // e.g. ["30mins", "60mins"]
 };
@@ -262,6 +321,16 @@ function loadData() {
       analyticsData = JSON.parse(savedAnalytics);
       if (!analyticsData.unlockedAchievements) analyticsData.unlockedAchievements = [];
       if (!analyticsData.unlockedMilestones) analyticsData.unlockedMilestones = [];
+      if (!analyticsData.dailyScoreHistory) analyticsData.dailyScoreHistory = {};
+      if (!analyticsData.productivityRecords) {
+        analyticsData.productivityRecords = {
+          highestScore: 0,
+          bestProductiveDay: null,
+          highestTasksInDay: 0,
+          highestStudyMinutes: 0,
+          bestStudyDay: null
+        };
+      }
     } catch (e) {
       initializeAnalyticsData();
     }
@@ -308,6 +377,16 @@ function loadData() {
       subjects = JSON.parse(savedSubjects);
     } catch (e) {
       subjects = [];
+    }
+  }
+
+  // Load Calendar Events
+  const savedCalendar = localStorage.getItem('quests_calendar');
+  if (savedCalendar) {
+    try {
+      calendarEvents = JSON.parse(savedCalendar);
+    } catch (e) {
+      calendarEvents = [];
     }
   }
 }
@@ -470,6 +549,7 @@ function toggleNotificationPanel(show) {
 
 
 // ==========================
+
 // Drag & Drop: Persist order
 // ==========================
 function enableDragAndDrop() {
@@ -931,6 +1011,9 @@ function addTask() {
   saveData();
   renderTasks();
 
+  // Refresh calendar to reflect any deadlines
+  renderCalendar();
+
   updateDeadlineAlerts();
 
 
@@ -1005,6 +1088,7 @@ function createTaskEl(task) {
       analyticsData.completedTasksPerDay[todayStr] = (analyticsData.completedTasksPerDay[todayStr] || 0) + 1;
       analyticsData.categoryStats[task.category].completed = (analyticsData.categoryStats[task.category].completed || 0) + 1;
       updateAnalyticsStreak(todayStr);
+      updateProductivityRecords(todayStr);
 
       // Visual Feedback and Rewards
       triggerConfetti();
@@ -1021,6 +1105,7 @@ function createTaskEl(task) {
         analyticsData.completedTasksPerDay[todayStr] = Math.max(0, analyticsData.completedTasksPerDay[todayStr] - 1);
       }
       analyticsData.categoryStats[task.category].completed = Math.max(0, analyticsData.categoryStats[task.category].completed - 1);
+      updateProductivityRecords(todayStr);
     }
 
     saveData();
@@ -1456,6 +1541,54 @@ function renderPerformance() {
   }
 }
 
+function renderSubjectTracker() {
+  const grid = document.getElementById("subjectsGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  if (!subjects || subjects.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1; text-align:center; padding:40px;">
+        <i class="ri-book-open-line" style="font-size: 2.5rem; opacity: 0.3;"></i>
+        <h3>No subjects added yet</h3>
+        <p>Create a subject to track homework, revision, and mastery progress.</p>
+      </div>
+    `;
+    return;
+  }
+
+  subjects.forEach(subject => {
+    const percentage = subject.total > 0 ? Math.round((subject.completed / subject.total) * 100) : 0;
+    const card = document.createElement("div");
+    card.className = "subject-card glass";
+    card.innerHTML = `
+      <div class="subject-card-header">
+        <div>
+          <h4>${escapeHtml(subject.title)}</h4>
+          <p>${subject.completed} / ${subject.total} topics completed</p>
+        </div>
+        <button class="icon-btn delete-btn" onclick="deleteSubject(${subject.id})" aria-label="Delete subject"><i class="ri-delete-bin-line"></i></button>
+      </div>
+      <div class="subject-progress-wrap">
+        <div class="subject-progress-bar">
+          <div class="subject-progress-fill" style="width: ${percentage}%"></div>
+        </div>
+        <span class="subject-progress-label">${percentage}% mastery</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+window.deleteSubject = (id) => {
+  if (confirm("Delete this subject record?")) {
+    subjects = subjects.filter(s => s.id !== id);
+    saveData();
+    renderSubjectTracker();
+    announce("Subject record removed.");
+  }
+};
+
 window.deletePerformance = (id) => {
   if (confirm("Delete this academic record?")) {
     performanceData = performanceData.filter(p => p.id !== id);
@@ -1597,6 +1730,11 @@ function renderCalendar() {
   if (!grid) return;
 
   grid.innerHTML = "";
+  // if week view active, render week
+  if (currentCalendarView === 'week') {
+    renderCalendarWeek(grid, currentCalendarDate);
+    return;
+  }
   const year = currentCalendarDate.getFullYear();
   const month = currentCalendarDate.getMonth();
   
@@ -1624,15 +1762,53 @@ function renderCalendar() {
     }
 
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const dayEvents = calendarEvents.filter(e => e.date === dateStr);
+    const dayEvents = [];
+    // calendar custom events
+    calendarEvents.filter(e => e.date === dateStr).forEach(e => dayEvents.push(Object.assign({}, e, { type: 'custom' })));
+    // tasks with deadline on this date
+    tasks.filter(t => t.deadline).forEach(t => {
+      const dt = getDatePart(t.deadline);
+      if (dt === dateStr) dayEvents.push({ id: t.id, title: t.text, type: 'task', deadline: t.deadline, category: t.category });
+    });
+    // exams
+    exams.forEach(ex => {
+      const exDate = new Date(ex.date);
+      const exDateStr = `${exDate.getFullYear()}-${String(exDate.getMonth()+1).padStart(2,'0')}-${String(exDate.getDate()).padStart(2,'0')}`;
+      if (exDateStr === dateStr) dayEvents.push({ id: ex.id, title: ex.title, type: 'exam', subject: ex.subject });
+    });
+    // focus sessions
+    (analyticsData.focusHistory || []).forEach(f => {
+      const fDate = new Date(f.timestamp);
+      const fDateStr = `${fDate.getFullYear()}-${String(fDate.getMonth()+1).padStart(2,'0')}-${String(fDate.getDate()).padStart(2,'0')}`;
+      if (fDateStr === dateStr) dayEvents.push({ id: f.timestamp, title: `Focus ${f.duration || f.minutes || ''}m`, type: 'focus' });
+    });
+    // daily goals (show on today only)
+    try {
+      const dg = JSON.parse(localStorage.getItem('daily_goals') || '[]');
+      if (dg && dg.length > 0) {
+        const todayStr = getFormattedDate(new Date());
+        if (todayStr === dateStr) dg.forEach(g => dayEvents.push({ id: g.id || g.text, title: g.text || 'Daily Goal', type: 'daily' }));
+      }
+    } catch(e) {}
 
     dayDiv.innerHTML = `<span class="day-number">${d}</span>`;
-    dayEvents.forEach(e => {
+    dayEvents.slice(0,3).forEach(e => {
       const eDiv = document.createElement("div");
-      eDiv.className = "event-pill-mini";
+      eDiv.className = `event-pill-mini ${e.type === 'task' ? 'event-task' : e.type === 'exam' ? 'event-exam' : e.type === 'focus' ? 'event-focus' : e.type === 'daily' ? 'event-daily' : 'event-custom'}`;
       eDiv.textContent = e.title;
+      eDiv.title = e.title;
       dayDiv.appendChild(eDiv);
     });
+
+    // highlight upcoming deadlines (within 48 hours)
+    const twoDaysAhead = new Date(); twoDaysAhead.setDate(twoDaysAhead.getDate()+2);
+    const todayISO = getFormattedDate(new Date());
+    const checkUpcoming = tasks.some(t => {
+      if (!t.deadline) return false;
+      const dpart = getDatePart(t.deadline);
+      return dpart === dateStr && new Date(t.deadline) <= twoDaysAhead && new Date(t.deadline) >= new Date();
+    });
+    if (checkUpcoming) dayDiv.classList.add('upcoming');
 
     dayDiv.onclick = () => {
       document.getElementById("eventDateInput").value = dateStr;
@@ -1678,6 +1854,53 @@ function initCalendarNotifier() {
   }, 30000);
 }
 
+function getDatePart(val) {
+  if (!val) return null;
+  // handle datetime-local value like 2026-05-23T14:00
+  if (typeof val === 'string' && val.indexOf('T') !== -1) return val.split('T')[0];
+  try {
+    const d = new Date(val);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  } catch (e) { return null; }
+}
+
+function renderCalendarWeek(grid, dateRef) {
+  grid.innerHTML = '';
+  const start = new Date(dateRef);
+  // set to start of week (Sunday)
+  start.setDate(start.getDate() - start.getDay());
+
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(start);
+    day.setDate(start.getDate() + i);
+    const dateStr = `${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`;
+
+    const col = document.createElement('div');
+    col.className = 'calendar-day';
+    col.innerHTML = `<span class="day-number">${day.getDate()}</span><div style="margin-top:22px; font-weight:600;">${day.toLocaleDateString(undefined,{weekday:'long'})}</div>`;
+
+    const dayEvents = [];
+    calendarEvents.filter(e => e.date === dateStr).forEach(e => dayEvents.push(Object.assign({}, e, { type: 'custom' })));
+    tasks.filter(t => t.deadline && getDatePart(t.deadline) === dateStr).forEach(t => dayEvents.push({ id: t.id, title: t.text, type: 'task', deadline: t.deadline, category: t.category }));
+    exams.forEach(ex => { const exDate = new Date(ex.date); const exDateStr = `${exDate.getFullYear()}-${String(exDate.getMonth()+1).padStart(2,'0')}-${String(exDate.getDate()).padStart(2,'0')}`; if (exDateStr === dateStr) dayEvents.push({ id: ex.id, title: ex.title, type: 'exam' }); });
+    (analyticsData.focusHistory || []).forEach(f => { const fDate = new Date(f.timestamp); const fDateStr = `${fDate.getFullYear()}-${String(fDate.getMonth()+1).padStart(2,'0')}-${String(fDate.getDate()).padStart(2,'0')}`; if (fDateStr === dateStr) dayEvents.push({ id: f.timestamp, title: `Focus ${f.duration || f.minutes || ''}m`, type: 'focus' }); });
+
+    dayEvents.forEach(e => {
+      const eDiv = document.createElement('div');
+      eDiv.className = `event-pill-mini ${e.type === 'task' ? 'event-task' : e.type === 'exam' ? 'event-exam' : e.type === 'focus' ? 'event-focus' : e.type === 'daily' ? 'event-daily' : 'event-custom'}`;
+      eDiv.textContent = e.title;
+      col.appendChild(eDiv);
+    });
+
+    col.onclick = () => {
+      document.getElementById('eventDateInput').value = dateStr;
+      document.getElementById('eventTitleInput').focus();
+    };
+
+    grid.appendChild(col);
+  }
+}
+
 function updateAnalyticsStreak(todayStr) {
   if (analyticsData.lastActiveDate === todayStr) return;
 
@@ -1696,6 +1919,71 @@ function updateAnalyticsStreak(todayStr) {
   }
 
   analyticsData.lastActiveDate = todayStr;
+}
+
+function computeDailyProductivityScore(dateStr) {
+  const completedTasks = analyticsData.completedTasksPerDay[dateStr] || 0;
+  const studyMinutes = analyticsData.dailyStudyMinutes[dateStr] || 0;
+  const streakBonus = analyticsData.lastActiveDate === dateStr ? (analyticsData.currentStreak || 0) * 5 : 0;
+  const score = Math.round((completedTasks * 35) + (studyMinutes * 1.4) + streakBonus);
+
+  analyticsData.dailyScoreHistory = analyticsData.dailyScoreHistory || {};
+  analyticsData.dailyScoreHistory[dateStr] = score;
+  return score;
+}
+
+function updateProductivityRecords(dateStr) {
+  analyticsData.dailyScoreHistory = analyticsData.dailyScoreHistory || {};
+  const score = computeDailyProductivityScore(dateStr);
+  const studyMinutes = analyticsData.dailyStudyMinutes[dateStr] || 0;
+  const completedTasks = analyticsData.completedTasksPerDay[dateStr] || 0;
+
+  if (!analyticsData.productivityRecords) {
+    analyticsData.productivityRecords = {
+      highestScore: 0,
+      bestProductiveDay: null,
+      highestTasksInDay: 0,
+      highestStudyMinutes: 0,
+      bestStudyDay: null
+    };
+  }
+
+  if (score > analyticsData.productivityRecords.highestScore) {
+    analyticsData.productivityRecords.highestScore = score;
+    analyticsData.productivityRecords.bestProductiveDay = dateStr;
+  }
+
+  if (completedTasks > analyticsData.productivityRecords.highestTasksInDay) {
+    analyticsData.productivityRecords.highestTasksInDay = completedTasks;
+    analyticsData.productivityRecords.bestProductiveDay = dateStr;
+  }
+
+  if (studyMinutes > analyticsData.productivityRecords.highestStudyMinutes) {
+    analyticsData.productivityRecords.highestStudyMinutes = studyMinutes;
+    analyticsData.productivityRecords.bestStudyDay = dateStr;
+  }
+
+  saveData();
+}
+
+function getTodayProductivityScore() {
+  const todayStr = getFormattedDate(new Date());
+  if (analyticsData.dailyScoreHistory && analyticsData.dailyScoreHistory[todayStr] != null) {
+    return analyticsData.dailyScoreHistory[todayStr];
+  }
+  return computeDailyProductivityScore(todayStr);
+}
+
+function getDailyHighScore() {
+  let highScore = 0;
+  let bestDay = null;
+  Object.entries(analyticsData.dailyScoreHistory || {}).forEach(([day, score]) => {
+    if (typeof score === 'number' && score > highScore) {
+      highScore = score;
+      bestDay = day;
+    }
+  });
+  return { score: highScore, day: bestDay };
 }
 
 // Helpers
@@ -1757,6 +2045,7 @@ function startTimer() {
       const fractionalMinutes = elapsedSeconds / 60;
       analyticsData.dailyStudyMinutes[todayStr] = (analyticsData.dailyStudyMinutes[todayStr] || 0) + fractionalMinutes;
       saveData();
+      updateProductivityRecords(todayStr);
     }
 
     updateDisplay();
@@ -1781,6 +2070,9 @@ function startTimer() {
         if (analyticsData.focusHistory.length > 10) {
           analyticsData.focusHistory.shift();
         }
+
+        saveData();
+        renderCalendar();
 
         isStudy = false;
         currentTime = breakTime;
@@ -2140,904 +2432,102 @@ function updateAnalyticsDashboard() {
   const rateEl = document.getElementById("analyticsCompletionRate");
   if (rateEl) rateEl.textContent = `${completionRate}%`;
 
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  const weekStart = new Date(today);
-  weekStart.setDate(weekStart.getDate() - 6);
-  weekStart.setHours(0, 0, 0, 0);
-
-  const weeklyTasks = tasks.filter(task => {
-    if (!task.createdAt) return false;
-    const createdDate = new Date(task.createdAt);
-    return createdDate >= weekStart && createdDate <= today;
-  });
-
-  const weeklyCompleted = weeklyTasks.filter(task => task.completed).length;
-  const weeklyPending = weeklyTasks.filter(task => !task.completed).length;
-  const weeklyAvg = weeklyTasks.length ? Math.max(0, Math.round((weeklyTasks.length / 7) * 10) / 10) : 0;
-  const weeklyCompletionRate = weeklyTasks.length ? Math.round((weeklyCompleted / weeklyTasks.length) * 100) : 0;
-
-  const weeklyCompletedTasksEl = document.getElementById("weeklyCompletedTasks");
-  if (weeklyCompletedTasksEl) weeklyCompletedTasksEl.textContent = weeklyCompleted;
-  const weeklyPendingTasksEl = document.getElementById("weeklyPendingTasks");
-  if (weeklyPendingTasksEl) weeklyPendingTasksEl.textContent = weeklyPending;
-  const weeklyAvgTasksEl = document.getElementById("weeklyAvgTasks");
-  if (weeklyAvgTasksEl) weeklyAvgTasksEl.textContent = weeklyAvg;
-  const weeklyCompletionRateEl = document.getElementById("weeklyCompletionRate");
-  if (weeklyCompletionRateEl) weeklyCompletionRateEl.textContent = `${weeklyCompletionRate}%`;
-
-  // 2. Initialize or Update Chart.js instances
-  initStudyHoursChart();
-  initCategoryChart();
-  initCompletionTrendChart();
-
-  // 3. Render Heatmap and mastery stats
-  renderHeatmap();
-  renderQuestMastery();
-  
-  // 4. Render Highlights & History
-  renderFocusHistory();
-  
-  const mostProductiveDayEl = document.getElementById("mostProductiveDay");
-  if (mostProductiveDayEl) mostProductiveDayEl.textContent = calculateMostProductiveDay();
-  
-  const peakFocusHourEl = document.getElementById("peakFocusHour");
-  if (peakFocusHourEl) peakFocusHourEl.textContent = getPeakFocusHour();
-  
-  const longestFocusStreakEl = document.getElementById("longestFocusStreak");
-  if (longestFocusStreakEl) longestFocusStreakEl.textContent = `${analyticsData.longestStreak || 8} days`;
-}
-
-function initStudyHoursChart() {
-  const chartCanvas = document.getElementById("studyHoursChart");
-  if (!chartCanvas) return;
-
-  const ctx = chartCanvas.getContext("2d");
-  const dates = [];
-  const studyValues = [];
-  const today = new Date();
-
-  // Handle Weekly vs Monthly labels
-  const daysToView = currentStudyView === "weekly" ? 7 : 30;
-  for (let i = daysToView - 1; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(today.getDate() - i);
-    const dateStr = getFormattedDate(date);
-    dates.push(date.toLocaleDateString(undefined, { weekday: daysToView === 7 ? 'short' : undefined, month: 'short', day: 'numeric' }));
-    studyValues.push((analyticsData.dailyStudyMinutes[dateStr] || 0).toFixed(1));
-  }
-
-  // Get active CSS variables for chart colors
-  const textClr = isLightTheme() ? "#4b5563" : "#94a3b8";
-  const gridClr = isLightTheme() ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)";
-  const primaryClr = getComputedStyle(document.body).getPropertyValue('--primary').trim() || "#7c3aed";
-  const secondaryClr = getComputedStyle(document.body).getPropertyValue('--secondary').trim() || "#06b6d4";
-
-  if (studyChartInstance) {
-    studyChartInstance.destroy();
-  }
-
-  // Generate linear gradients for the chart
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, primaryClr);
-  gradient.addColorStop(1, secondaryClr);
-
-  studyChartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: dates,
-      datasets: [{
-        label: 'Minutes Studied',
-        data: studyValues,
-        backgroundColor: gradient,
-        borderRadius: 8,
-        hoverBackgroundColor: primaryClr
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: textClr, font: { family: 'Poppins' } }
-        },
-        y: {
-          grid: { color: gridClr },
-          ticks: { color: textClr, font: { family: 'Poppins' } }
-        }
-      }
-    }
-  });
-}
-
-function initCategoryChart() {
-  const chartCanvas = document.getElementById("categoryChart");
-  if (!chartCanvas) return;
-
-  const ctx = chartCanvas.getContext("2d");
-  
-  const labels = ["Theory 📘", "Practical 🧪", "Assignment 📝", "Revision 📖"];
-  const completedData = [
-    analyticsData.categoryStats.Theory?.completed || 0,
-    analyticsData.categoryStats.Practical?.completed || 0,
-    analyticsData.categoryStats.Assignment?.completed || 0,
-    analyticsData.categoryStats.Revision?.completed || 0
-  ];
-
-  const textClr = isLightTheme() ? "#4b5563" : "#e2e8f0";
-
-  if (categoryChartInstance) {
-    categoryChartInstance.destroy();
-  }
-
-  // Fallback visual data if no completed category items yet
-  const displayData = completedData.some(v => v > 0) ? completedData : [1, 1, 1, 1];
-
-  categoryChartInstance = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: displayData,
-        backgroundColor: ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"],
-        borderWidth: 0,
-        hoverOffset: 12
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: textClr, font: { family: 'Poppins', size: 12 }, padding: 15 }
-        }
-      },
-      cutout: '70%'
-    }
-  });
-}
-
-// Chart toggle click listeners
-document.getElementById("btnWeeklyStudy")?.addEventListener("click", () => {
-  const weekly = document.getElementById("btnWeeklyStudy");
-  const monthly = document.getElementById("btnMonthlyStudy");
-  weekly.classList.add("active");
-  weekly.setAttribute("aria-pressed", "true");
-  monthly.classList.remove("active");
-  monthly.setAttribute("aria-pressed", "false");
-  currentStudyView = "weekly";
-  initStudyHoursChart();
-});
-
-document.getElementById("btnMonthlyStudy")?.addEventListener("click", () => {
-  const weekly = document.getElementById("btnWeeklyStudy");
-  const monthly = document.getElementById("btnMonthlyStudy");
-  monthly.classList.add("active");
-  monthly.setAttribute("aria-pressed", "true");
-  weekly.classList.remove("active");
-  weekly.setAttribute("aria-pressed", "false");
-  currentStudyView = "monthly";
-  initStudyHoursChart();
-});
-
-let completionTrendView = "weekly"; // "weekly" or "monthly"
-
-function initCompletionTrendChart() {
-  const chartCanvas = document.getElementById("completionTrendChart");
-  if (!chartCanvas) return;
-
-  const ctx = chartCanvas.getContext("2d");
-  const dates = [];
-  const completionValues = [];
-  const today = new Date();
-
-  // Handle Weekly vs Monthly labels
-  const daysToView = completionTrendView === "weekly" ? 7 : 30;
-  for (let i = daysToView - 1; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(today.getDate() - i);
-    const dateStr = getFormattedDate(date);
-    dates.push(date.toLocaleDateString(undefined, { weekday: daysToView === 7 ? 'short' : undefined, month: 'short', day: 'numeric' }));
-    completionValues.push(analyticsData.completedTasksPerDay[dateStr] || 0);
-  }
-
-  const textClr = isLightTheme() ? "#4b5563" : "#94a3b8";
-  const gridClr = isLightTheme() ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.05)";
-  const primaryClr = getComputedStyle(document.body).getPropertyValue('--primary').trim() || "#7c3aed";
-  const secondaryClr = getComputedStyle(document.body).getPropertyValue('--secondary').trim() || "#06b6d4";
-
-  if (completionTrendChartInstance) {
-    completionTrendChartInstance.destroy();
-  }
-
-  // Generate linear gradient for the line fill
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, "rgba(6, 182, 212, 0.25)");
-  gradient.addColorStop(1, "rgba(124, 58, 237, 0.0)");
-
-  completionTrendChartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: dates,
-      datasets: [{
-        label: 'Quests Completed',
-        data: completionValues,
-        borderColor: secondaryClr,
-        backgroundColor: gradient,
-        fill: true,
-        tension: 0.4,
-        borderWidth: 3,
-        pointBackgroundColor: primaryClr,
-        pointBorderColor: "#fff",
-        pointHoverRadius: 7
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: textClr, font: { family: 'Poppins' } }
-        },
-        y: {
-          grid: { color: gridClr },
-          ticks: { 
-            color: textClr, 
-            font: { family: 'Poppins' },
-            stepSize: 1,
-            precision: 0
-          }
-        }
-      }
-    }
-  });
-}
-
-// Chart toggle click listeners for completion trend
-document.getElementById("btnWeeklyTrend")?.addEventListener("click", () => {
-  const weekly = document.getElementById("btnWeeklyTrend");
-  const monthly = document.getElementById("btnMonthlyTrend");
-  weekly.classList.add("active");
-  weekly.setAttribute("aria-pressed", "true");
-  monthly.classList.remove("active");
-  monthly.setAttribute("aria-pressed", "false");
-  completionTrendView = "weekly";
-  initCompletionTrendChart();
-});
-
-document.getElementById("btnMonthlyTrend")?.addEventListener("click", () => {
-  const weekly = document.getElementById("btnWeeklyTrend");
-  const monthly = document.getElementById("btnMonthlyTrend");
-  monthly.classList.add("active");
-  monthly.setAttribute("aria-pressed", "true");
-  weekly.classList.remove("active");
-  weekly.setAttribute("aria-pressed", "false");
-  completionTrendView = "monthly";
-  initCompletionTrendChart();
-});
-
-function renderFocusHistory() {
-  const container = document.getElementById("focusHistoryList");
-  if (!container) return;
-  container.innerHTML = "";
-
-  const history = analyticsData.focusHistory || [];
-  if (history.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state enhanced-empty" id="focusEmpty">
-        <svg width="140" height="90" viewBox="0 0 140 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs>
-            <linearGradient id="g3" x1="0" x2="1">
-              <stop offset="0" stop-color="#f59e0b" />
-              <stop offset="1" stop-color="#f43f5e" />
-            </linearGradient>
-          </defs>
-          <rect x="8" y="18" width="124" height="54" rx="8" fill="url(#g3)" opacity="0.12" />
-          <path d="M28 40h84v6H28z" fill="#fff" opacity="0.06" />
-          <circle cx="110" cy="56" r="10" fill="url(#g3)" />
-        </svg>
-        <h3>No Focus Sessions Yet</h3>
-        <p class="muted">Track study sessions with the Pomodoro timer to build momentum.</p>
-        <div class="empty-cta-row">
-          <button class="view-btn primary" id="ctaStartSession">Start Focus Session</button>
-          <button class="view-btn" id="ctaCreateTaskFromHistory">Create Task</button>
-        </div>
-      </div>
-    `;
-    // Attach CTA handlers after inserting
-    setTimeout(() => {
-      const startBtn = document.getElementById('ctaStartSession');
-      const createBtn = document.getElementById('ctaCreateTaskFromHistory');
-      if (startBtn) startBtn.addEventListener('click', () => { startTimer(); });
-      if (createBtn) createBtn.addEventListener('click', () => { document.getElementById('taskInput').focus(); });
-    }, 0);
-    return;
-  }
-
-  // Render in reverse chronological order (newest first)
-  [...history].reverse().forEach(session => {
-    const item = document.createElement("div");
-    item.className = "history-item";
-    
-    const date = new Date(session.timestamp);
-    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const dayStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    
-    // Check if it's today or yesterday or older
-    const todayStr = new Date().toDateString();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toDateString();
-    
-    let displayTime = `${dayStr}, ${timeStr}`;
-    if (date.toDateString() === todayStr) {
-      displayTime = `Today, ${timeStr}`;
-    } else if (date.toDateString() === yesterdayStr) {
-      displayTime = `Yesterday, ${timeStr}`;
-    }
-    
-    item.innerHTML = `
-      <span class="history-time">${displayTime}</span>
-      <span class="history-details">${getCategoryEmoji(session.category)} Studied ${session.category} for ${session.duration} mins</span>
-      <span class="history-reward">+${session.rewardXp} XP</span>
-    `;
-    container.appendChild(item);
-  });
-}
-
-function calculateMostProductiveDay() {
-  const daySums = [0, 0, 0, 0, 0, 0, 0]; // Sun-Sat
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  
-  // Sum completed tasks per weekday
-  Object.keys(analyticsData.completedTasksPerDay).forEach(dateStr => {
-    const date = new Date(dateStr);
-    const dayOfWeek = date.getDay();
-    if (!isNaN(dayOfWeek)) {
-      daySums[dayOfWeek] += analyticsData.completedTasksPerDay[dateStr] || 0;
-    }
-  });
-  
-  let maxIdx = 2; // Default to Tuesday/Wednesday if no data
-  let maxVal = 0;
-  for (let i = 0; i < 7; i++) {
-    if (daySums[i] > maxVal) {
-      maxVal = daySums[i];
-      maxIdx = i;
-    }
-  }
-  
-  return dayNames[maxIdx];
-}
-
-function getPeakFocusHour() {
-  const hours = ["9 AM - 11 AM", "2 PM - 4 PM", "4 PM - 6 PM", "7 PM - 9 PM"];
-  const index = (xp + coins) % hours.length;
-  return hours[index];
-}
-
-// ==========================================================================
-// 9. GITHUB CONSISTENCY HEATMAP GENERATOR
-// ==========================================================================
-
-function renderHeatmap() {
-  const container = document.getElementById("heatmapContainer");
-  if (!container) return;
-  container.innerHTML = "";
-
-  const today = new Date();
-  const weeksToDisplay = 15;
-  const daysToDisplay = weeksToDisplay * 7;
-  
-  // Align start date to the beginning of the week
-  const startDate = new Date();
-  startDate.setDate(today.getDate() - daysToDisplay + 1);
-
-  // Generate grid items
-  for (let i = 0; i < daysToDisplay; i++) {
-    const day = new Date(startDate.getTime());
-    day.setDate(startDate.getDate() + i);
-    const dateStr = getFormattedDate(day);
-
-    const studyMinutes = analyticsData.dailyStudyMinutes[dateStr] || 0;
-    const completedTasks = analyticsData.completedTasksPerDay[dateStr] || 0;
-    
-    // Overall activity metric
-    const activityScore = Math.round(studyMinutes + (completedTasks * 12));
-    
-    let level = 0;
-    if (activityScore > 0) {
-      if (activityScore <= 15) level = 1;
-      else if (activityScore <= 35) level = 2;
-      else if (activityScore <= 65) level = 3;
-      else level = 4;
-    }
-
-    const dayBlock = document.createElement("div");
-    dayBlock.classList.add("heatmap-day", `level-${level}`);
-    
-    // Readable date for tooltip
-    const formattedDate = day.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-    const tooltipText = `${formattedDate}: ${studyMinutes.toFixed(1)} mins study, ${completedTasks} completed quests`;
-    dayBlock.setAttribute("data-tooltip", tooltipText);
-
-    container.appendChild(dayBlock);
-  }
-}
-
-// ==========================================================================
-// 10. QUEST MASTERY PROGRESS LIST
-// ==========================================================================
-
-function renderQuestMastery() {
-  const container = document.getElementById("subjectProgressList");
-  if (!container) return;
-  container.innerHTML = "";
-
-  const categories = ["Theory", "Practical", "Assignment", "Revision"];
-  const progressClasses = ["theory", "practical", "assignment", "revision"];
-
-  categories.forEach((cat, index) => {
-    const stats = analyticsData.categoryStats[cat] || { created: 0, completed: 0 };
-    const created = stats.created || 0;
-    const completed = stats.completed || 0;
-    
-    const percentage = created > 0 ? Math.round((completed / created) * 100) : 0;
-    const barClass = progressClasses[index];
-
-    const progressRow = document.createElement("div");
-    progressRow.classList.add("subject-progress-item");
-    progressRow.innerHTML = `
-      <div class="subject-info-row">
-        <span class="subject-name">${getCategoryEmoji(cat)} ${cat}</span>
-        <span class="subject-ratio"><span>${completed}</span> / ${created} completed</span>
-      </div>
-      <div class="subject-bar-container">
-        <div class="subject-bar-fill ${barClass}" style="width: ${percentage}%"></div>
-      </div>
-    `;
-
-    container.appendChild(progressRow);
-  });
-}
-
-// ==========================================================================
-// DEADLINE TRACKER FUNCTIONS
-// ==========================================================================
-
-function getTimeUntilDeadline(deadlineString) {
-  if (!deadlineString) return null;
-  
-  const deadline = new Date(deadlineString).getTime();
-  const now = Date.now();
-  const diff = deadline - now;
-
-  if (diff < 0) {
-    return { 
-      formatted: "OVERDUE", 
-      minutes: 0, 
-      urgency: "critical" 
-    };
-  }
-
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  let formatted = "";
-  if (days > 0) {
-    formatted = `${days}d ${hours % 24}h`;
-  } else if (hours > 0) {
-    formatted = `${hours}h ${minutes % 60}m`;
-  } else {
-    formatted = `${minutes}m`;
-  }
-
-  const urgency = diff < 7200000 ? "critical" : (diff < 86400000 ? "warning" : "normal");
-
-  return { formatted, minutes, urgency };
-}
-
-function getDeadlineUrgency(deadlineString) {
-  if (!deadlineString) return "";
-  const urgencyData = getTimeUntilDeadline(deadlineString);
-  return urgencyData ? urgencyData.urgency : "";
-}
-
-function formatDeadlineDisplay(deadlineString) {
-  if (!deadlineString) return "";
-  const urgencyData = getTimeUntilDeadline(deadlineString);
-  return urgencyData ? urgencyData.formatted + " left" : "";
-}
-
-function updateDeadlineAlerts() {
-  const container = document.getElementById("deadlineAlerts");
-  if (!container) return;
-
-  const now = Date.now();
-  const urgentTasks = tasks
-    .filter(task => task.deadline && !task.completed)
-    .filter(task => {
-      const deadline = new Date(task.deadline).getTime();
-      const diff = deadline - now;
-      return diff < 86400000; // 24 hours
-    })
-    .sort((a, b) => {
-      const aDeadline = new Date(a.deadline).getTime();
-      const bDeadline = new Date(b.deadline).getTime();
-      return aDeadline - bDeadline;
-    });
-
-  container.innerHTML = "";
-
-  if (urgentTasks.length === 0) {
-    return;
-  }
-
-  urgentTasks.slice(0, 3).forEach(task => {
-    const urgencyData = getTimeUntilDeadline(task.deadline);
-    const alertDiv = document.createElement("div");
-    alertDiv.classList.add("deadline-alert");
-    if (urgencyData.urgency !== "normal") {
-      alertDiv.classList.add("warning");
-    }
-
-
-    // Send browser notification for tasks reaching critical urgency
-    if (urgencyData.urgency === "critical") {
-      sendNotification("Urgent Deadline!", `COMPLETE ${task.text} TASK ASAP`);
-      addNotification({ type: 'deadline', title: `Deadline: ${task.text}`, body: `${urgencyData.formatted} left`, ref: `task-deadline-${task.id}` });
-    }
-
-
-    const icon = urgencyData.urgency === "critical" ? "ri-alarm-warning-fill" : "ri-time-line";
-    
-    alertDiv.innerHTML = `
-      <i class="${icon}"></i>
-      <div class="alert-content">
-        <strong>${escapeHtml(task.text)}</strong>
-        <p>${urgencyData.formatted}</p>
-      </div>
-    `;
-
-    container.appendChild(alertDiv);
-  });
-}
-
-function sortByDeadline() {
-  const now = Date.now();
-  
-  tasks.sort((a, b) => {
-    const aDeadline = a.deadline ? new Date(a.deadline).getTime() : Infinity;
-    const bDeadline = b.deadline ? new Date(b.deadline).getTime() : Infinity;
-    
-    if (aDeadline === Infinity && bDeadline === Infinity) return 0;
-    if (aDeadline === Infinity) return 1;
-    if (bDeadline === Infinity) return -1;
-    
-    return aDeadline - bDeadline;
-  });
-
-  currentFilter = "All";
-  renderTasks();
-}
-
-/**
- * Automatically deducts 10 points (coins) for tasks that pass their deadline 
- * without being completed.
- */
-function checkOverduePenalties() {
-  const now = Date.now();
-  let changed = false;
-
-  tasks.forEach(task => {
-    // Only penalize if it has a deadline, isn't done, and hasn't been penalized yet
-    if (task.deadline && !task.completed && !task.penaltyApplied) {
-      const deadlineTime = new Date(task.deadline).getTime();
-      
-      if (now > deadlineTime) {
-        coins = Math.max(0, coins - 10);
-        task.penaltyApplied = true;
-        changed = true;
-        
-        showTaskPopup(`DEADLINE MISSED: -10 PTS FOR "${task.text.toUpperCase()}"`);
-        announce(`Deadline missed for task ${task.text}. 10 points deducted.`);
-      }
-    }
-  });
-
-  if (changed) {
-    saveData();
-    updateGamification();
-  }
-}
-
-// Initialize deadline update interval
-function initDeadlineUpdater() {
-  updateDeadlineAlerts();
-  setInterval(() => {
-    checkOverduePenalties();
-    updateDeadlineAlerts();
-    renderTasks();
-  }, 60000); // Update every minute
-}
-
-// ==========================================================================
-// 11. ADVANCED RESPONSIVENESS AND COLLAPSIBLE SIDEBAR MENU
-// ==========================================================================
-
-const sidebar = document.querySelector(".sidebar");
-const sidebarOverlay = document.createElement("div");
-sidebarOverlay.className = "sidebar-overlay";
-document.body.appendChild(sidebarOverlay);
-
-const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
-
-function toggleSidebar(show) {
-  if (show) {
-    sidebar.classList.add("open");
-    sidebarOverlay.classList.add("active");
-    enableFocusTrap(sidebar);
-  } else {
-    sidebar.classList.remove("open");
-    sidebarOverlay.classList.remove("active");
-    disableFocusTrap();
-  }
-}
-
-if (mobileSidebarToggle) {
-  mobileSidebarToggle.addEventListener("click", () => toggleSidebar(true));
-}
-sidebarOverlay.addEventListener("click", () => toggleSidebar(false));
-
-// ==========================================================================
-// 12. MOBILE FLOATING QUICK ADD Form Controllers
-// ==========================================================================
-
-const mobileAddDrawer = document.getElementById("mobileAddDrawer");
-const mobileAddDrawerOverlay = document.getElementById("mobileAddDrawerOverlay");
-const mobileQuickAddBtn = document.getElementById("mobileQuickAddBtn");
-const closeDrawerBtn = document.getElementById("closeDrawerBtn");
-const mobileAddTaskBtn = document.getElementById("mobileAddTaskBtn");
-const mobileTaskInput = document.getElementById("mobileTaskInput");
-const mobileCategorySelect = document.getElementById("mobileCategorySelect");
-
-function toggleMobileDrawer(show) {
-  if (show) {
-    mobileAddDrawer.classList.add("open");
-    mobileAddDrawerOverlay.classList.add("active");
-    enableFocusTrap(mobileAddDrawer);
-    setTimeout(() => mobileTaskInput.focus(), 150); // Auto-focus on drawer slide up
-  } else {
-    mobileAddDrawer.classList.remove("open");
-    mobileAddDrawerOverlay.classList.remove("active");
-    disableFocusTrap();
-  }
-}
-
-if (mobileQuickAddBtn) {
-  mobileQuickAddBtn.addEventListener("click", () => toggleMobileDrawer(true));
-}
-if (closeDrawerBtn) {
-  closeDrawerBtn.addEventListener("click", () => toggleMobileDrawer(false));
-}
-if (mobileAddDrawerOverlay) {
-  mobileAddDrawerOverlay.addEventListener("click", () => toggleMobileDrawer(false));
-}
-
-// Create new quest from mobile form
-if (mobileAddTaskBtn) {
-  mobileAddTaskBtn.addEventListener("click", () => {
-    const text = mobileTaskInput.value.trim();
-    const category = mobileCategorySelect.value;
-
-    const mobilePrioritySelect = document.getElementById("mobilePrioritySelect");
-    const priority = mobilePrioritySelect ? mobilePrioritySelect.value : "Medium";
-
-    const mobileDeadlineInput = document.getElementById("mobileDeadlineInput");
-    const deadline = mobileDeadlineInput ? mobileDeadlineInput.value : "";
-
-    if (text === "") {
-      mobileTaskInput.classList.add("input-invalid");
-      mobileTaskInput.setAttribute("aria-invalid", "true");
-      announce("Failed to add task. Please enter a task description.");
-      setTimeout(() => {
-        mobileTaskInput.classList.remove("input-invalid");
-      }, 400);
-      return;
-    }
-    mobileTaskInput.setAttribute("aria-invalid", "false");
-
-
-    const task = {
-      id: Date.now(),
-      text,
-      category,
-      priority,
-      completed: false,
-      createdAt: getFormattedDateTime(new Date()),
-      deadline: deadline || null,
-      penaltyApplied: false
-    };
-
-    tasks.push(task);
-    mobileTaskInput.value = "";
-    if (mobileDeadlineInput) mobileDeadlineInput.value = "";
-
-    if (!analyticsData.categoryStats[category]) {
-      analyticsData.categoryStats[category] = { created: 0, completed: 0 };
-    }
-    analyticsData.categoryStats[category].created += 1;
-
-    saveData();
-    renderTasks();
-
-    // Notify user to complete the new task ASAP (Mobile)
-    sendNotification("Quest Assigned", `COMPLETE ${text} TASK ASAP`);
-
-    // Show UI popup notification (Mobile)
-    showTaskPopup(`COMPLETE ${text.toUpperCase()} TASK ASAP`);
-
-    toggleMobileDrawer(false); // Hide overlay
-    announce(`Task added: "${text}". Category: ${category}, Priority: ${priority}.`);
-  });
-}
-
-// ==========================================================================
-// 13. ACCESSIBILITY COMPLIANCE KEYBOARD SHORTCUTS
-// ==========================================================================
-
-document.addEventListener("keydown", e => {
-  // Focus main input or open mobile input form on Alt + N or Alt + A
-  if (e.altKey && (e.key.toLowerCase() === 'n' || e.key.toLowerCase() === 'a')) {
-    e.preventDefault();
-    if (window.innerWidth <= 900) {
-      toggleMobileDrawer(true);
-    } else {
-      taskInput.focus();
-    }
-  }
-
-  // Switch to workspace tab on Alt + 1
-  if (e.altKey && e.key === '1') {
-    e.preventDefault();
-    const tabBtnQuests = document.querySelector('[data-tab="quests"]');
-    if (tabBtnQuests) tabBtnQuests.click();
-  }
-
-  // Switch to analytics dashboard on Alt + 2
-  if (e.altKey && e.key === '2') {
-    e.preventDefault();
-    const tabBtnAnalytics = document.querySelector('[data-tab="analytics"]');
-    if (tabBtnAnalytics) tabBtnAnalytics.click();
-  }
-
-  // Alt + Space to start/pause Study Timer
-  if (e.altKey && e.code === 'Space') {
-    e.preventDefault();
-    if (timer) {
-      pauseTimer();
-      alert("Timer Paused");
-    } else {
-      startTimer();
-      alert("Timer Started");
-    }
-  }
-
-  // Escape to close active mobile sidebar or slide drawers
-  if (e.key === 'Escape') {
-    toggleSidebar(false);
-    toggleMobileDrawer(false);
-  }
-});
-
-// ==========================================================================
-// 14. INTERACTIVE SYSTEM INITIALIZATIONS
-// ==========================================================================
-
-// Filter Button routers
-filterBtns.forEach(btn => {
-  btn.addEventListener("click", () => {
-    filterBtns.forEach(b => {
-      b.classList.remove("active");
-      b.setAttribute("aria-pressed", "false");
-    });
-    btn.classList.add("active");
-    btn.setAttribute("aria-pressed", "true");
-    currentFilter = btn.dataset.filter;
-    renderTasks();
-  });
-});
-
-// Sort Button Event Listeners
-sortBtns.forEach(btn => {
-  btn.addEventListener("click", () => {
-    sortBtns.forEach(b => {
-      b.classList.remove("active");
-      b.setAttribute("aria-pressed", "false");
-    });
-    btn.classList.add("active");
-    btn.setAttribute("aria-pressed", "true");
-    currentSort = btn.dataset.sort;
-    renderTasks();
-  });
-});
-
-// Logic to clear all tasks at once
-const resetTasksBtn = document.getElementById("resetTasksBtn");
-if (resetTasksBtn) {
-  resetTasksBtn.addEventListener("click", () => {
-    if (confirm("Are you sure you want to clear all quests? This action cannot be undone.")) {
-      tasks = [];
-      saveData();
-      renderTasks();
-      updateGamification();
-      announce("All tasks have been cleared successfully.");
-    }
-  });
-}
-
-// Theme selection dot selectors click listeners
-document.querySelectorAll(".theme-dot").forEach(dot => {
-  dot.addEventListener("click", () => {
-    setTheme(dot.dataset.theme);
-  });
-});
-
-// Main Keypress triggers
-taskInput.addEventListener("keypress", e => {
-  if (e.key === "Enter") {
-    addTask();
-  }
-});
-
-addTaskBtn.addEventListener("click", addTask);
-
-// Deadline filter button
-const sortByDeadlineBtn = document.getElementById("sortByDeadline");
-if (sortByDeadlineBtn) {
-  sortByDeadlineBtn.addEventListener("click", () => {
-    sortByDeadline();
-  });
-}
-
-// Dom Loaded
-document.addEventListener("DOMContentLoaded", () => {
-  // Request browser notification permissions on startup
-  if ("Notification" in window && Notification.permission === "default") {
-    Notification.requestPermission();
-  }
-
-  // Search input logic
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
-      searchQuery = e.target.value.toLowerCase();
-      renderTasks();
+  // Notifications init
+  loadNotifications();
+  renderNotificationPanel();
+  updateNotificationBadge();
+
+  const bell = document.getElementById('notificationBell');
+  const panel = document.getElementById('notificationPanel');
+  const markAllBtn = document.getElementById('markAllReadBtn');
+  const clearAllBtn = document.getElementById('clearAllNotifBtn');
+
+  if (bell) {
+    bell.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNotificationPanel();
     });
   }
 
-  loadData();
-  updateGamification();
-  renderTasks();
-  renderAchievements();
-  renderWeeklyStreak();
-  updateDisplay();
-  renderPerformance();
-  renderFocusHistory();
-  renderTimetable();
-  renderCalendar();
-  renderProfile();
-  renderSubjectTracker();
+  // Close panel if clicking outside
+  document.addEventListener('click', (e) => {
+    if (!panel) return;
+    const target = e.target;
+    if (!panel.contains(target) && !bell.contains(target)) {
+      panel.style.display = 'none';
+      if (bell) bell.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  if (markAllBtn) markAllBtn.addEventListener('click', () => markAllRead());
+  if (clearAllBtn) clearAllBtn.addEventListener('click', () => clearAllNotifications());
+
+  // CTA wiring for empty states
+  const ctaCreateTask = document.getElementById('ctaCreateTask');
+  if (ctaCreateTask) ctaCreateTask.addEventListener('click', () => { document.getElementById('taskInput').focus(); });
+
+  const ctaBrowseTemplates = document.getElementById('ctaBrowseTemplates');
+  if (ctaBrowseTemplates) ctaBrowseTemplates.addEventListener('click', () => { document.getElementById('taskTemplate').focus(); });
+
+  const ctaUploadFiles = document.getElementById('ctaUploadFiles');
+  if (ctaUploadFiles) ctaUploadFiles.addEventListener('click', () => { document.getElementById('vaultFileInput').click(); });
+
+  const vaultBrowseBtnSmall = document.getElementById('vaultBrowseBtnSmall');
+  if (vaultBrowseBtnSmall) vaultBrowseBtnSmall.addEventListener('click', () => { document.getElementById('vaultFileInput').click(); });
+
+  const ctaAddSubject = document.getElementById('ctaAddSubject');
+  if (ctaAddSubject) ctaAddSubject.addEventListener('click', () => { const s = document.getElementById('subjectInputForm'); if (s) { s.style.display='grid'; s.querySelector('input')?.focus(); } });
+
+  // Export menu handlers
+  const exportBtn = document.getElementById('exportBtn');
+  const exportMenu = document.getElementById('exportMenu');
+  const exportCsvBtn = document.getElementById('exportCsvBtn');
+  const exportPngBtn = document.getElementById('exportPngBtn');
+  const exportPdfBtn = document.getElementById('exportPdfBtn');
+
+  if (exportBtn && exportMenu) {
+    exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportMenu.style.display = exportMenu.style.display === 'block' ? 'none' : 'block';
+    });
+  }
+
+  document.addEventListener('click', () => { if (exportMenu) exportMenu.style.display = 'none'; });
+
+  if (exportCsvBtn) exportCsvBtn.addEventListener('click', (e) => { e.stopPropagation(); exportAnalyticsCSV(); exportMenu.style.display='none'; });
+  if (exportPngBtn) exportPngBtn.addEventListener('click', (e) => { e.stopPropagation(); exportChartsPNG(); exportMenu.style.display='none'; });
+  if (exportPdfBtn) exportPdfBtn.addEventListener('click', (e) => { e.stopPropagation(); exportAnalyticsPDF(); exportMenu.style.display='none'; });
+
+
+  // Notifications init
+  loadNotifications();
+  renderNotificationPanel();
+  updateNotificationBadge();
+
+  const bell = document.getElementById('notificationBell');
+  const panel = document.getElementById('notificationPanel');
+  const markAllBtn = document.getElementById('markAllReadBtn');
+  const clearAllBtn = document.getElementById('clearAllNotifBtn');
+
+  if (bell) {
+    bell.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNotificationPanel();
+    });
+  }
+
+  // Close panel if clicking outside
+  document.addEventListener('click', (e) => {
+    if (!panel) return;
+    const target = e.target;
+    if (!panel.contains(target) && !bell.contains(target)) {
+      panel.style.display = 'none';
+      if (bell) bell.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  if (markAllBtn) markAllBtn.addEventListener('click', () => markAllRead());
+  if (clearAllBtn) clearAllBtn.addEventListener('click', () => clearAllNotifications());
 
   // Notifications init
   loadNotifications();
@@ -3221,6 +2711,9 @@ document.addEventListener("DOMContentLoaded", () => {
     currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
     renderCalendar();
   });
+
+  document.getElementById('calViewMonth')?.addEventListener('click', (e) => { currentCalendarView = 'month'; document.getElementById('calViewMonth')?.classList.add('active'); document.getElementById('calViewWeek')?.classList.remove('active'); renderCalendar(); });
+  document.getElementById('calViewWeek')?.addEventListener('click', (e) => { currentCalendarView = 'week'; document.getElementById('calViewWeek')?.classList.add('active'); document.getElementById('calViewMonth')?.classList.remove('active'); renderCalendar(); });
 
   document.getElementById("addEventBtn")?.addEventListener("click", () => {
     const title = document.getElementById("eventTitleInput").value.trim();
@@ -3475,7 +2968,9 @@ function showTaskPopup(message) {
     setTimeout(() => popup.remove(), 600);
   }, 3500);
 
+
 }
+
 
 }
 
@@ -3532,10 +3027,16 @@ if (addExamBtn) {
 
     saveData();
     renderExams();
+
+    renderCalendar();
     announce(`Added exam: ${title}`);
 
     // Add notification for new exam tracked
     addNotification({ type: 'exam', title: `Exam tracked: ${title}`, body: `${subject} — ${new Date(exam.date).toLocaleString()}`, ref: `exam-${exam.id}` });
+
+
+    announce(`Added exam: ${title}`);
+
 
     // Clear form
     document.getElementById("examTitle").value = "";
@@ -3605,7 +3106,9 @@ function updateExamsCountdown() {
       // Trigger notification once if < 24h
       if (!notifiedExams.has(exam.id)) {
         sendNotification("Urgent Exam!", `${exam.title} is in less than 24 hours!`);
+
         addNotification({ type: 'exam', title: `Exam soon: ${exam.title}`, body: `${exam.subject} in <24 hours`, ref: `exam-urgent-${exam.id}` });
+
         notifiedExams.add(exam.id);
       }
     } else if (timeDiff < 3 * 24 * 60 * 60 * 1000) {
@@ -4170,5 +3673,9 @@ function renderVault() {
 
     vaultFilesGrid.appendChild(card);
   });
+
 }
+
+}
+
 

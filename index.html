@@ -19,6 +19,8 @@
   
   <!-- Chart.js for analytics visualization -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <link rel="stylesheet" href="style.css">
 </head>
@@ -38,6 +40,18 @@
       <div class="logo-box">
         <div class="logo">
           <i class="ri-gamepad-fill"></i>
+        </div>
+
+        <!-- Export Controls -->
+        <div class="analytics-export-row" style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;position:relative;">
+          <div class="export-group">
+            <button class="view-btn" id="exportBtn"><i class="ri-download-2-line"></i> Export</button>
+            <div id="exportMenu" class="export-menu" style="display:none; position:absolute; right:0; background:var(--card); border:1px solid var(--border); padding:8px; border-radius:8px; box-shadow:var(--shadow); z-index:50;">
+              <button class="view-btn" id="exportCsvBtn">Export CSV</button>
+              <button class="view-btn" id="exportPngBtn">Export Charts (PNG)</button>
+              <button class="view-btn" id="exportPdfBtn">Export PDF</button>
+            </div>
+          </div>
         </div>
         <div>
           <h1>TaskQuest</h1>
@@ -211,6 +225,9 @@
         </button>
         <button class="tab-btn" id="tabBtnCalendar" data-tab="calendar" role="tab" aria-selected="false" aria-controls="calendar-tab">
           <i class="ri-calendar-event-line"></i> Event Calendar
+        </button>
+        <button class="tab-btn" id="tabBtnMotivation" data-tab="motivation" role="tab" aria-selected="false" aria-controls="motivation-tab">
+          <i class="ri-flashlight-line"></i> Motivation
         </button>
       </div>
       
@@ -892,6 +909,57 @@
           </div>
         </div>
 
+
+        <div class="analytics-stats-grid">
+          <div class="analytics-stat-card glass">
+            <div class="stat-icon-wrapper blue">
+              <i class="ri-flashlight-line"></i>
+            </div>
+            <div class="stat-info" style="width: 100%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <h3 id="analyticsDailyScore">0</h3>
+                <span class="trend-pill positive"><i class="ri-arrow-up-line"></i> Live</span>
+              </div>
+              <p>Today's Productivity Score</p>
+            </div>
+          </div>
+          <div class="analytics-stat-card glass">
+            <div class="stat-icon-wrapper green">
+              <i class="ri-award-line"></i>
+            </div>
+            <div class="stat-info" style="width: 100%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <h3 id="analyticsDailyHighScore">0</h3>
+                <span class="trend-pill positive"><i class="ri-arrow-up-line"></i> Best</span>
+              </div>
+              <p>Daily High Score</p>
+            </div>
+          </div>
+          <div class="analytics-stat-card glass">
+            <div class="stat-icon-wrapper yellow">
+              <i class="ri-calendar-check-line"></i>
+            </div>
+            <div class="stat-info" style="width: 100%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <h3 id="analyticsBestProductiveDay">—</h3>
+              </div>
+              <p>Best Productivity Day</p>
+            </div>
+          </div>
+          <div class="analytics-stat-card glass">
+            <div class="stat-icon-wrapper orange">
+              <i class="ri-timer-flash-line"></i>
+            </div>
+            <div class="stat-info" style="width: 100%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <h3 id="analyticsBestStudyRecord">0 min</h3>
+              </div>
+              <p>Best Study Record</p>
+            </div>
+          </div>
+        </div>
+
+
         <div class="analytics-weekly-summary-grid">
           <div class="weekly-stat-card glass">
             <div class="stat-icon-wrapper blue">
@@ -1271,15 +1339,27 @@
 
         <div class="calendar-container glass">
           <div class="calendar-header">
-            <button class="icon-btn" id="prevMonth" aria-label="Previous Month"><i class="ri-arrow-left-s-line"></i></button>
-            <h3 id="currentMonthYear">Month Year</h3>
-            <button class="icon-btn" id="nextMonth" aria-label="Next Month"><i class="ri-arrow-right-s-line"></i></button>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button class="icon-btn" id="prevMonth" aria-label="Previous"><i class="ri-arrow-left-s-line"></i></button>
+              <h3 id="currentMonthYear">Month Year</h3>
+              <button class="icon-btn" id="nextMonth" aria-label="Next"><i class="ri-arrow-right-s-line"></i></button>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:6px;">
+              <button class="view-btn small active" id="calViewMonth">Monthly</button>
+              <button class="view-btn small" id="calViewWeek">Weekly</button>
+            </div>
           </div>
           <div class="calendar-weekdays">
             <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
           </div>
           <div class="calendar-grid" id="calendarGrid">
             <!-- Days populated by JS -->
+          </div>
+          <div class="calendar-legend" style="padding-top:10px;">
+            <div class="legend-item"><span class="legend-dot task"></span> Tasks</div>
+            <div class="legend-item"><span class="legend-dot exam"></span> Exams</div>
+            <div class="legend-item"><span class="legend-dot focus"></span> Focus Sessions</div>
+            <div class="legend-item"><span class="legend-dot daily"></span> Daily Goals</div>
           </div>
         </div>
 
@@ -1294,6 +1374,93 @@
       </div>
 
       <!-- APP FOOTER -->
+      <!-- TAB: MOTIVATION -->
+      <div id="motivation-tab" class="tab-content" role="tabpanel" aria-labelledby="tabBtnMotivation">
+        <div class="motivation-page">
+          <!-- Hero Section -->
+          <section class="hero" aria-labelledby="hero-heading">
+            <div class="hero__badge">Motivation</div>
+            <h2 id="hero-heading" class="hero__title">Stay Motivated Every Day</h2>
+            <p class="hero__lead">Small consistent steps compound into extraordinary results. Use these prompts, tips, and quotes to build focus, discipline, and momentum for your studies.</p>
+            <ul class="badges badges--productivity" role="list">
+              <li class="badge"><i class="fa fa-sun"></i> Daily Inspiration</li>
+              <li class="badge"><i class="fa fa-bullseye"></i> Focus Boost</li>
+              <li class="badge"><i class="fa fa-smile"></i> Positive Mindset</li>
+            </ul>
+          </section>
+
+          <!-- Quotes Grid -->
+          <section class="quotes" aria-labelledby="quotes-heading">
+            <h3 id="quotes-heading" class="section__title">Motivational Quotes</h3>
+            <div class="quote-grid">
+              <article class="quote-card" aria-labelledby="q1-title">
+                <div class="quote-card__icon"><i class="fa fa-book-open"></i></div>
+                <blockquote class="quote" id="q1-title">"The secret of getting ahead is getting started."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Mark Twain</span><span class="quote-card__badge">Study Motivation</span></div>
+              </article>
+              <article class="quote-card" aria-labelledby="q2-title">
+                <div class="quote-card__icon"><i class="fa fa-hourglass-half"></i></div>
+                <blockquote class="quote" id="q2-title">"Discipline is choosing between what you want now and what you want most."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Abraham Lincoln</span><span class="quote-card__badge">Discipline</span></div>
+              </article>
+              <article class="quote-card" aria-labelledby="q3-title">
+                <div class="quote-card__icon"><i class="fa fa-rocket"></i></div>
+                <blockquote class="quote" id="q3-title">"Success is the sum of small efforts, repeated day in and day out."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Robert Collier</span><span class="quote-card__badge">Success Mindset</span></div>
+              </article>
+              <article class="quote-card" aria-labelledby="q4-title">
+                <div class="quote-card__icon"><i class="fa fa-repeat"></i></div>
+                <blockquote class="quote" id="q4-title">"Small disciplines repeated with consistency every day lead to great achievements."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Unknown</span><span class="quote-card__badge">Consistency</span></div>
+              </article>
+              <article class="quote-card" aria-labelledby="q5-title">
+                <div class="quote-card__icon"><i class="fa fa-lightbulb"></i></div>
+                <blockquote class="quote" id="q5-title">"I focus on progress, not perfection. Each session moves me forward."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Personal Affirmation</span><span class="quote-card__badge">Productivity</span></div>
+              </article>
+              <article class="quote-card" aria-labelledby="q6-title">
+                <div class="quote-card__icon"><i class="fa fa-brain"></i></div>
+                <blockquote class="quote" id="q6-title">"Turn setbacks into lessons; growth follows intentional reflection."</blockquote>
+                <div class="quote-card__meta"><span class="quote-card__author">— Learning Mindset</span><span class="quote-card__badge">Growth</span></div>
+              </article>
+            </div>
+          </section>
+
+          <!-- Daily Motivation Banner -->
+          <section class="daily-banner" aria-labelledby="daily-heading">
+            <h4 id="daily-heading" class="section__label">Quote of the Day</h4>
+            <div class="daily-banner__inner">
+              <div class="daily-banner__glow" aria-hidden="true"></div>
+              <blockquote class="daily-banner__quote">"Mastery begins with showing up. Do the work today and the future will thank you."</blockquote>
+              <cite class="daily-banner__author">— Elena Ramirez, Academic Coach</cite>
+            </div>
+          </section>
+
+          <!-- Productivity Tips -->
+          <section class="tips" aria-labelledby="tips-heading">
+            <h3 id="tips-heading" class="section__title">Productivity Tips</h3>
+            <div class="tips-grid">
+              <article class="tip-card"><h5 class="tip-card__title">Avoiding Distractions</h5><p class="tip-card__body">Create a dedicated study space, silence notifications, and use focused intervals (25–50 mins) followed by short breaks.</p></article>
+              <article class="tip-card"><h5 class="tip-card__title">Effective Study Methods</h5><p class="tip-card__body">Use active recall and spaced repetition. Teach back concepts to check true understanding.</p></article>
+              <article class="tip-card"><h5 class="tip-card__title">Time Management</h5><p class="tip-card__body">Prioritize tasks with an impact/effort matrix and block peak-focus time for deep work.</p></article>
+              <article class="tip-card"><h5 class="tip-card__title">Focus Improvement</h5><p class="tip-card__body">Train attention with single-task sessions, remove multi-tasking, and practice brief mindfulness before starting.</p></article>
+              <article class="tip-card"><h5 class="tip-card__title">Consistency Habits</h5><p class="tip-card__body">Build small daily rituals (study start routine, review, and reflection) to make progress automatic.</p></article>
+            </div>
+          </section>
+
+          <!-- Achievements -->
+          <section class="achievements" aria-labelledby="achieve-heading">
+            <h3 id="achieve-heading" class="section__title">Achievements</h3>
+            <div class="achievements__grid">
+              <div class="achievement-card"><div class="achievement-card__icon"><i class="fa fa-fire"></i></div><div class="achievement-card__body"><div class="achievement-card__value">12</div><div class="achievement-card__label">Day Study Streak</div></div></div>
+              <div class="achievement-card"><div class="achievement-card__icon"><i class="fa fa-check"></i></div><div class="achievement-card__body"><div class="achievement-card__value">48</div><div class="achievement-card__label">Tasks Completed</div></div></div>
+              <div class="achievement-card"><div class="achievement-card__icon"><i class="fa fa-chart-line"></i></div><div class="achievement-card__body"><div class="achievement-card__value">76%</div><div class="achievement-card__label">Weekly Progress</div></div></div>
+              <div class="achievement-card"><div class="achievement-card__icon"><i class="fa fa-clock"></i></div><div class="achievement-card__body"><div class="achievement-card__value">9.5h</div><div class="achievement-card__label">Focus Hours</div></div></div>
+            </div>
+          </section>
+        </div>
+      </div>
+
       <footer class="app-footer">
         <div class="footer-content">
           <div class="footer-brand">
@@ -1320,6 +1487,23 @@
           </div>
         </div>
       </footer>
+
+      <!-- Footer enhancements: newsletter & back-to-top -->
+      <div class="footer-enhancements">
+        <div class="newsletter-panel">
+          <h4>Stay in the loop</h4>
+          <p>Subscribe for release notes and productivity tips.</p>
+          <div class="newsletter-input-row">
+            <input type="email" id="footerEmail" placeholder="Your email address" aria-label="Subscribe email" />
+            <button id="subscribeBtn" class="view-btn">Subscribe</button>
+          </div>
+          <div id="subscribeMsg" class="muted" aria-live="polite" style="margin-top:8px;"></div>
+        </div>
+
+        <button id="backToTopBtn" class="back-to-top" title="Back to top" aria-label="Back to top">
+          <i class="ri-arrow-up-s-line"></i>
+        </button>
+      </div>
 
     </section>
 
