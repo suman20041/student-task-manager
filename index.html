@@ -23,6 +23,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="collaborative-styles.css">
 </head>
 
 <body>
@@ -56,6 +57,9 @@
         <div>
           <h1>TaskQuest</h1>
           <p>Level Up Productivity</p>
+          <button class="view-btn" id="goToStudyTogetherBtn" style="margin-top: 10px; font-size: 13px;">
+            <i class="ri-team-line"></i> Open Study Together
+          </button>
         </div>
       </div>
 
@@ -198,6 +202,11 @@
       </div>
 
       <!-- TAB NAVIGATION -->
+
+      <div class="tabs-scroll-wrapper">
+        <button class="tabs-scroll-btn left" id="tabsScrollLeft" type="button" aria-label="Scroll tabs left">
+          <i class="ri-arrow-left-line"></i>
+
       <div class="nav-tabs" role="tablist">
         <button class="tab-btn active" id="tabBtnQuests" data-tab="quests" role="tab" aria-selected="true" aria-controls="quests-tab">
           <i class="ri-checkbox-multiple-line"></i> Quests & Workspace
@@ -225,9 +234,42 @@
         </button>
         <button class="tab-btn" id="tabBtnTimetable" data-tab="timetable" role="tab" aria-selected="false" aria-controls="timetable-tab">
           <i class="ri-calendar-todo-line"></i> Smart Timetable
+
         </button>
-        <button class="tab-btn" id="tabBtnCalendar" data-tab="calendar" role="tab" aria-selected="false" aria-controls="calendar-tab">
-          <i class="ri-calendar-event-line"></i> Event Calendar
+        <div class="nav-tabs" role="tablist">
+          <button class="tab-btn active" id="tabBtnQuests" data-tab="quests" role="tab" aria-selected="true" aria-controls="quests-tab">
+            <i class="ri-checkbox-multiple-line"></i> Quests & Workspace
+          </button>
+          <button class="tab-btn" id="tabBtnSubjectTracker" data-tab="subject-tracker" role="tab" aria-selected="false" aria-controls="subject-tracker-tab">
+            <i class="ri-book-open-line"></i> Subject Mastery
+          </button>
+          <button class="tab-btn" id="tabBtnAnalytics" data-tab="analytics" role="tab" aria-selected="false" aria-controls="analytics-tab">
+            <i class="ri-bar-chart-2-line"></i> Analytics Hub
+          </button>
+          <button class="tab-btn" id="tabBtnAssignments" data-tab="assignments" role="tab" aria-selected="false" aria-controls="assignments-tab">
+            <i class="ri-calendar-check-line"></i> Assignments
+          </button>
+          <button class="tab-btn" id="tabBtnVault" data-tab="vault" role="tab" aria-selected="false" aria-controls="vault-tab">
+            <i class="ri-folder-open-line"></i> Files Vault
+          </button>
+          <button class="tab-btn" id="tabBtnBookmarks" data-tab="bookmarks" role="tab" aria-selected="false" aria-controls="bookmarks-tab">
+            <i class="ri-bookmark-3-line"></i> Bookmarks
+          </button>
+          <button class="tab-btn" id="tabBtnPerformance" data-tab="performance" role="tab" aria-selected="false" aria-controls="performance-tab">
+            <i class="ri-medal-line"></i> Academic Performance
+          </button>
+          <button class="tab-btn" id="tabBtnTimetable" data-tab="timetable" role="tab" aria-selected="false" aria-controls="timetable-tab">
+            <i class="ri-calendar-todo-line"></i> Smart Timetable
+          </button>
+          <button class="tab-btn" id="tabBtnCalendar" data-tab="calendar" role="tab" aria-selected="false" aria-controls="calendar-tab">
+            <i class="ri-calendar-event-line"></i> Event Calendar
+          </button>
+          <button class="tab-btn" id="tabBtnCollaborative" data-tab="collaborative" role="tab" aria-selected="false" aria-controls="collaborative-tab">
+            <i class="ri-team-line"></i> Study Together
+          </button>
+        </div>
+        <button class="tabs-scroll-btn right" id="tabsScrollRight" type="button" aria-label="Scroll tabs right">
+          <i class="ri-arrow-right-line"></i>
         </button>
         <button class="tab-btn" id="tabBtnMotivation" data-tab="motivation" role="tab" aria-selected="false" aria-controls="motivation-tab">
           <i class="ri-flashlight-line"></i> Motivation
@@ -1620,6 +1662,107 @@
         </button>
       </div>
 
+      <!-- TAB: COLLABORATIVE STUDY ENVIRONMENT -->
+      <div id="collaborative-tab" class="tab-content" role="tabpanel" aria-labelledby="tabBtnCollaborative">
+        
+        <!-- FRIENDS MANAGEMENT SECTION -->
+        <div class="collab-section glass" style="margin-bottom: 30px;">
+          <div class="collab-header">
+            <h2><i class="ri-user-add-line"></i> Study Friends</h2>
+            <button class="add-project-btn" id="addFriendBtn"><i class="ri-add-line"></i> Add Friend</button>
+          </div>
+
+          <div id="addFriendForm" class="task-box glass" style="display: none; margin-bottom: 20px;">
+            <input type="text" id="friendNameInput" placeholder="Enter friend's name or username...">
+            <button class="view-btn active" id="confirmAddFriendBtn">Add Friend</button>
+            <button class="view-btn" id="cancelAddFriendBtn">Cancel</button>
+          </div>
+
+          <div class="friends-list-grid" id="friendsListGrid">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- COLLABORATIVE STUDY SESSION -->
+        <div class="collab-section glass" style="margin-bottom: 30px;">
+          <div class="collab-header">
+            <h2><i class="ri-team-fill"></i> Study Together Now</h2>
+          </div>
+
+          <div class="collab-study-wrapper">
+            <div class="collab-session-info glass">
+              <div class="session-item">
+                <i class="ri-user-fill"></i>
+                <div>
+                  <p>Your Current Session</p>
+                  <h4 id="collabSessionUser">Not in session</h4>
+                </div>
+              </div>
+              <div class="session-item">
+                <i class="ri-users-fill"></i>
+                <div>
+                  <p>Study Partner(s)</p>
+                  <h4 id="collabSessionPartner">—</h4>
+                </div>
+              </div>
+              <div class="session-item">
+                <i class="ri-timer-line"></i>
+                <div>
+                  <p>Session Duration</p>
+                  <h4 id="collabSessionDuration">0 min</h4>
+                </div>
+              </div>
+            </div>
+
+            <div class="collab-actions" style="display: flex; gap: 12px; margin-top: 15px;">
+              <button class="view-btn primary" id="startCollabSessionBtn" style="flex: 1;"><i class="ri-play-line"></i> Start Study Session</button>
+              <button class="view-btn" id="stopCollabSessionBtn" style="flex: 1; display: none;"><i class="ri-stop-line"></i> End Session</button>
+              <button class="view-btn" id="inviteFriendBtn" style="flex: 1;"><i class="ri-send-plane-line"></i> Invite Friend</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PRODUCTIVITY CHALLENGES -->
+        <div class="collab-section glass" style="margin-bottom: 30px;">
+          <div class="collab-header">
+            <h2><i class="ri-trophy-line"></i> Productivity Challenges</h2>
+            <button class="add-project-btn" id="createChallengeBtn"><i class="ri-add-line"></i> Create Challenge</button>
+          </div>
+
+          <div id="createChallengeForm" class="task-box glass" style="display: none; margin-bottom: 20px; grid-template-columns: 1fr 1fr 1fr auto auto;">
+            <input type="text" id="challengeTitleInput" placeholder="Challenge name (e.g., 7-Day Study Sprint)">
+            <select id="challengeTypeSelect">
+              <option value="tasks">Most Tasks Completed</option>
+              <option value="study">Most Study Minutes</option>
+              <option value="score">Highest Daily Score</option>
+              <option value="streak">Longest Streak</option>
+            </select>
+            <input type="number" id="challengeDaysInput" placeholder="Duration (days)" min="1" max="30" value="7">
+            <button class="view-btn active" id="confirmCreateChallengeBtn">Create</button>
+            <button class="view-btn" id="cancelChallengeBtn">Cancel</button>
+          </div>
+
+          <div class="challenges-grid" id="challengesGrid">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- REAL-TIME LEADERBOARD -->
+        <div class="collab-section glass">
+          <div class="collab-header">
+            <h2><i class="ri-medal-fill"></i> Live Leaderboard</h2>
+            <button class="view-btn" id="refreshLeaderboardBtn"><i class="ri-refresh-line"></i> Refresh</button>
+          </div>
+
+          <div class="leaderboard-wrapper">
+            <div id="collabLeaderboard" class="collab-leaderboard-list">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+
     </section>
 
 
@@ -1893,7 +2036,11 @@
   </div>
 
 
+  <button class="fixed-open-study-btn" id="openStudyTogetherFab" type="button">
+    <i class="ri-team-line"></i> Open Study Together
+  </button>
   <script src="script.js"></script>
+  <script src="collaborative.js"></script>
 
 </body>
 </html>

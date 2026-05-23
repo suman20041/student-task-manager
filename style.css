@@ -1421,36 +1421,137 @@ body.light .topbar-left h2 {
    ========================================================================== */
 
 /* Tabs Navigation */
+.tabs-scroll-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 28px;
+}
+
 .nav-tabs {
   display: flex;
-  gap: 10px;
-  margin-bottom: 32px;
+  flex-wrap: nowrap !important;
+  white-space: nowrap;
+  gap: 8px;
+  margin: 0;
   background: rgba(255, 255, 255, 0.04);
-  padding: 8px;
+  padding: 8px 18px;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  width: fit-content;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
   backdrop-filter: blur(10px);
+  scroll-snap-type: x mandatory;
+  cursor: grab;
+  touch-action: pan-x;
+}
+
+.nav-tabs:active {
+  cursor: grabbing;
+}
+
+.nav-tabs::-webkit-scrollbar {
+  height: 8px;
+}
+
+.nav-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav-tabs::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+
+.nav-tabs::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.tabs-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(15, 23, 42, 0.85);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.16);
+}
+
+.tabs-scroll-btn.left {
+  left: 8px;
+}
+
+.tabs-scroll-btn.right {
+  right: 8px;
+}
+
+.tabs-scroll-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.fixed-open-study-btn {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  min-height: 38px;
+  cursor: pointer;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+}
+
+.fixed-open-study-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.25);
+}
+
+.fixed-open-study-btn:active {
+  transform: translateY(0);
 }
 
 .tab-btn {
-  background: transparent !important;
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.05) !important;
   color: var(--text-light) !important;
   border: none;
-  padding: 11px 24px;
+  padding: 10px 14px;
   border-radius: 14px;
   cursor: pointer;
   font-family: inherit;
   font-weight: 600;
-  font-size: 14px;
-  display: flex;
+  font-size: 13px;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  white-space: nowrap;
+  min-width: auto;
   transition: var(--transition);
+  scroll-snap-align: start;
 }
 
 .tab-btn i {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .tab-btn:hover {
@@ -2548,10 +2649,13 @@ body.light .burger-btn,
 
   /* Keep top tabs visible but compact on mobile */
   .nav-tabs {
-    flex-wrap: wrap;
+    flex-wrap: nowrap !important;
+    white-space: nowrap;
     gap: 6px;
     padding: 6px;
     margin-bottom: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   /* Prevent filter buttons wrapping, enable horizontal scroll */
