@@ -6848,12 +6848,14 @@ body.light .drag-handle:hover {
   width: 90px;
   height: 90px;
   flex-shrink: 0;
+  --ring-accent: #f59e0b;
 }
 
 .daily-goals-ring {
   width: 90px;
   height: 90px;
   transform: rotate(-90deg);
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--ring-accent) 45%, transparent));
 }
 
 .dg-ring-bg {
@@ -6864,12 +6866,11 @@ body.light .drag-handle:hover {
 
 .dg-ring-fill {
   fill: none;
-  stroke: url(#dgGradient);
   stroke-width: 6;
   stroke-linecap: round;
   stroke-dasharray: 213.63; /* 2 * PI * r = 2 * 3.14159 * 34 */
   stroke-dashoffset: 213.63;
-  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s ease;
 }
 
 .daily-goals-ring-text {
@@ -6884,7 +6885,7 @@ body.light .drag-handle:hover {
 .daily-goals-ring-text span:first-child {
   font-size: 16px;
   font-weight: 800;
-  color: var(--text);
+  color: var(--ring-accent);
   display: block;
 }
 
@@ -6909,7 +6910,7 @@ body.light .drag-handle:hover {
 .dg-stat-num {
   font-size: 28px;
   font-weight: 800;
-  color: var(--text);
+  color: var(--ring-accent);
   line-height: 1;
 }
 
@@ -6942,6 +6943,28 @@ body.light .drag-handle:hover {
   color: #10b981;
   font-style: normal;
   font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .daily-goals-progress-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .daily-goals-ring-container {
+    align-self: center;
+  }
+
+  .daily-goals-stats {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .dg-stat {
+    flex: 1;
+  }
 }
 
 /* Add Goal Input Row */

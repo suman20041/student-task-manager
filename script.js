@@ -1417,6 +1417,7 @@ function updateStats() {
   if (totalTasks) totalTasks.textContent = tasks.length;
   if (completedTasks) completedTasks.textContent = tasks.filter(task => task.completed).length;
   updateDailyQuest();
+  renderDailyGoalRing();
 }
 function updateGamification() {
   const pointsEl = document.getElementById("coins");
@@ -2417,6 +2418,85 @@ function getTodayStreakGoal() {
   };
 }
 
+function getRingPalette(percent) {
+  if (percent >= 100) return { start: '#34d399', end: '#22c55e', accent: '#10b981' };
+  if (percent >= 75) return { start: '#60a5fa', end: '#3b82f6', accent: '#3b82f6' };
+  if (percent >= 50) return { start: '#fbbf24', end: '#f59e0b', accent: '#f59e0b' };
+  if (percent >= 25) return { start: '#fb923c', end: '#f97316', accent: '#f97316' };
+  return { start: '#fda4af', end: '#ef4444', accent: '#ef4444' };
+}
+
+function updateCircularProgressRing({
+  fillEl,
+  percent,
+  gradientId,
+  startStopId,
+  endStopId,
+  containerEl,
+  labelEl
+}) {
+  if (!fillEl) return 0;
+
+  const safePercent = Math.max(0, Math.min(100, Math.round(percent || 0)));
+  const palette = getRingPalette(safePercent);
+  const circumference = 213.63;
+
+  fillEl.style.strokeDashoffset = `${circumference - (circumference * safePercent / 100)}`;
+  if (gradientId) fillEl.style.stroke = `url(#${gradientId})`;
+
+  const startStop = startStopId ? document.getElementById(startStopId) : null;
+  const endStop = endStopId ? document.getElementById(endStopId) : null;
+  if (startStop) startStop.setAttribute('stop-color', palette.start);
+  if (endStop) endStop.setAttribute('stop-color', palette.end);
+
+  if (containerEl) containerEl.style.setProperty('--ring-accent', palette.accent);
+  if (labelEl) labelEl.textContent = `${safePercent}%`;
+
+  return safePercent;
+}
+
+function renderDailyGoalRing() {
+  const ringFill = document.getElementById('dgRingFill');
+  const percentEl = document.getElementById('dgPercent');
+  const totalEl = document.getElementById('dgTotalCount');
+  const doneEl = document.getElementById('dgDoneCount');
+  const leftEl = document.getElementById('dgLeftCount');
+  const motivationEl = document.getElementById('dgMotivation');
+  const ringContainer = document.querySelector('#dailyGoalsCard .daily-goals-ring-container');
+  const completedToday = tasks.filter(task => task.completed && task.createdAt && task.createdAt.startsWith(getFormattedDate(new Date()))).length;
+  const target = 5;
+  const percent = target > 0 ? (completedToday / target) * 100 : 0;
+  const remaining = Math.max(0, target - completedToday);
+
+  updateCircularProgressRing({
+    fillEl: ringFill,
+    percent,
+    gradientId: 'dgGradient',
+    startStopId: 'dgGradientStart',
+    endStopId: 'dgGradientEnd',
+    containerEl: ringContainer,
+    labelEl: percentEl
+  });
+
+  if (totalEl) totalEl.textContent = `${target}`;
+  if (doneEl) doneEl.textContent = `${completedToday}`;
+  if (leftEl) leftEl.textContent = `${remaining}`;
+
+  if (motivationEl) {
+    const messageEl = motivationEl.querySelector('span');
+    if (messageEl) {
+      if (completedToday === 0) {
+        messageEl.textContent = 'Set your first goal for today!';
+      } else if (percent < 100) {
+        messageEl.textContent = 'Good momentum. Finish the last few tasks to close the ring.';
+      } else {
+        messageEl.textContent = 'All daily tasks complete. Strong finish today.';
+      }
+    }
+    motivationEl.classList.toggle('all-done', percent >= 100);
+  }
+}
+
 function updateStreakMetrics() {
   const today = new Date();
   let currentCount = 0;
@@ -2454,13 +2534,22 @@ function renderStreakTracker() {
   const streakLongest = analyticsData.longestStreak || 0;
   const progressValue = Math.min(100, Math.round((todayMetrics.minutes / todayMetrics.goal) * 100));
   const remaining = Math.max(0, todayMetrics.targetTasks - todayMetrics.completed);
+  const ringContainer = document.querySelector('#streakProgressCard .daily-goals-ring-container');
 
   if (currentValue) currentValue.textContent = `${streakCurrent} days`;
   if (longestValue) longestValue.textContent = `${streakLongest} days`;
   if (todayMinutes) todayMinutes.textContent = `${todayMetrics.minutes} min`;
   if (goalProgress) goalProgress.textContent = `${progressValue}%`;
   if (goalPercent) goalPercent.textContent = `${progressValue}%`;
-  if (goalFill) goalFill.style.strokeDasharray = `${progressValue} 100`;
+  updateCircularProgressRing({
+    fillEl: goalFill,
+    percent: progressValue,
+    gradientId: 'streakGradient',
+    startStopId: 'streakGradientStart',
+    endStopId: 'streakGradientEnd',
+    containerEl: ringContainer,
+    labelEl: goalPercent
+  });
   if (goalCount) goalCount.innerHTML = `<i class="ri-checkbox-circle-line"></i> ${todayMetrics.completed} / ${todayMetrics.targetTasks}`;
   if (tasksCompleted) tasksCompleted.textContent = todayMetrics.completed;
   if (goalLeft) goalLeft.textContent = remaining;
