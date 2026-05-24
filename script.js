@@ -129,6 +129,39 @@ function getTagColor(tag) {
   return palette[Math.abs(hash) % palette.length];
 }
 
+// Subject color mapping - deterministic, consistent, accessible
+function getSubjectColor(subject) {
+  if (!subject) return '#94a3b8';
+  const palette = [
+    '#06b6d4', // cyan
+    '#8b5cf6', // purple
+    '#10b981', // green
+    '#f97316', // orange
+    '#ef4444', // red
+    '#3b82f6', // blue
+    '#f59e0b', // amber
+    '#a78bfa'  // violet
+  ];
+  const key = normalizeTag(subject).toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash << 5) - hash + key.charCodeAt(i);
+    hash |= 0;
+  }
+  return palette[Math.abs(hash) % palette.length];
+}
+
+function getContrastColor(hex) {
+  if (!hex) return '#fff';
+  const c = hex.replace('#','');
+  const r = parseInt(c.substring(0,2),16);
+  const g = parseInt(c.substring(2,4),16);
+  const b = parseInt(c.substring(4,6),16);
+  // relative luminance
+  const luminance = (0.2126*r + 0.7152*g + 0.0722*b) / 255;
+  return luminance > 0.6 ? '#0b1220' : '#ffffff';
+}
+
 function getRecentTags() {
   try {
     const stored = JSON.parse(localStorage.getItem("quests_recent_tags") || "[]");
@@ -1388,6 +1421,8 @@ function createTaskEl(task) {
   const pri = task.priority || "Medium";
   const catEmoji = getCategoryEmoji(task.category);
   const tags = getTaskTags(task);
+  const subjectColor = getSubjectColor(task.category);
+  const subjectTextColor = getContrastColor(subjectColor);
 
   div.innerHTML = `
     <div class="drag-handle" title="Drag to reorder"><i class="ri-drag-move-fill"></i></div>
@@ -1396,7 +1431,7 @@ function createTaskEl(task) {
       <div>
         <h3 class="task-title">${escapeHtml(task.text)}</h3>
         <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
-          <p class="task-category" style="margin: 0;">${catEmoji} ${task.category}</p>
+          <p class="task-category" style="margin: 0;"><span class="subject-pill" style="background: ${subjectColor}; color: ${subjectTextColor};">${catEmoji} ${escapeHtml(task.category)}</span></p>
           <span class="priority-pill priority-${pri.toLowerCase()}">${pri}</span>
           <span class="task-timestamp" style="font-size: 11px; color: var(--text-light); opacity: 0.8;"><i class="ri-history-line"></i> ${task.createdAt}</span>
         </div>

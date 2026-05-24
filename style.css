@@ -1273,6 +1273,19 @@ body.light .topbar-left h2 {
   font-size: 11px;
 }
 
+/* Subject pill shown on task cards */
+.subject-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+}
+
 /* DAILY QUEST */
 
 .daily-quest {
