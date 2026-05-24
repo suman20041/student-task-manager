@@ -129,6 +129,7 @@ function getTagColor(tag) {
   return palette[Math.abs(hash) % palette.length];
 }
 
+
 // Subject color mapping - deterministic, consistent, accessible
 function getSubjectColor(subject) {
   if (!subject) return '#94a3b8';
@@ -161,6 +162,7 @@ function getContrastColor(hex) {
   const luminance = (0.2126*r + 0.7152*g + 0.0722*b) / 255;
   return luminance > 0.6 ? '#0b1220' : '#ffffff';
 }
+
 
 function getRecentTags() {
   try {
@@ -1457,8 +1459,10 @@ function createTaskEl(task) {
   const pri = task.priority || "Medium";
   const catEmoji = getCategoryEmoji(task.category);
   const tags = getTaskTags(task);
+
   const subjectColor = getSubjectColor(task.category);
   const subjectTextColor = getContrastColor(subjectColor);
+
 
   div.innerHTML = `
     <div class="drag-handle" title="Drag to reorder"><i class="ri-drag-move-fill"></i></div>
@@ -3139,6 +3143,7 @@ function renderStreakTracker() {
   if (goalLeft) goalLeft.textContent = remaining;
   if (xpReward) xpReward.textContent = `+${todayMetrics.completed * 20} XP`;
 
+
   renderWeeklyStreak();
   updateGamification();
 }
@@ -3166,6 +3171,37 @@ function completeDailyGoal() {
   checkAchievements();
   announce("Today's goal completed — streak progress updated.");
 }
+
+
+
+  renderWeeklyStreak();
+  updateGamification();
+}
+
+function logStudyMinutes(minutes = 25) {
+  const today = getFormattedDate(new Date());
+  analyticsData.dailyStudyMinutes[today] = (analyticsData.dailyStudyMinutes[today] || 0) + minutes;
+  analyticsData.completedTasksPerDay[today] = Math.max(analyticsData.completedTasksPerDay[today] || 0, 1);
+  xp += 15;
+  updateStreakMetrics();
+  saveData();
+  renderStreakTracker();
+  checkAchievements();
+  announce(`Logged ${minutes} minutes of study. Keep the streak alive!`);
+}
+
+function completeDailyGoal() {
+  const today = getFormattedDate(new Date());
+  analyticsData.completedTasksPerDay[today] = Math.max(analyticsData.completedTasksPerDay[today] || 0, 5);
+  analyticsData.dailyStudyMinutes[today] = Math.max(analyticsData.dailyStudyMinutes[today] || 0, 60);
+  xp += 40;
+  updateStreakMetrics();
+  saveData();
+  renderStreakTracker();
+  checkAchievements();
+  announce("Today's goal completed — streak progress updated.");
+}
+
 
 function announce(message) {
   const liveRegion = document.getElementById("liveRegion");
@@ -3224,6 +3260,7 @@ function updateAnalyticsDashboard() {
   }
 
 
+
   loadData();
   updateStreakMetrics();
   updateGamification();
@@ -3248,6 +3285,34 @@ function updateAnalyticsDashboard() {
       if (bell) bell.setAttribute('aria-expanded', 'false');
     }
   });
+
+
+
+  loadData();
+  updateStreakMetrics();
+  updateGamification();
+  renderTasks();
+  renderAchievements();
+  renderWeeklyStreak();
+  renderStreakTracker();
+  updateDisplay();
+  renderPerformance();
+  renderTimetable();
+  renderCalendar();
+  renderProfile();
+  renderSubjectTracker();
+  renderHeatmap(15);
+
+  // Close panel if clicking outside
+  document.addEventListener('click', (e) => {
+    if (!panel) return;
+    const target = e.target;
+    if (!panel.contains(target) && !bell.contains(target)) {
+      panel.style.display = 'none';
+      if (bell) bell.setAttribute('aria-expanded', 'false');
+    }
+  });
+
 
   if (markAllBtn) markAllBtn.addEventListener('click', () => markAllRead());
   if (clearAllBtn) clearAllBtn.addEventListener('click', () => clearAllNotifications());
@@ -3282,11 +3347,22 @@ function updateAnalyticsDashboard() {
     });
   }
 
+
   document.addEventListener('click', () => { if (exportMenu) exportMenu.style.display = 'none'; });
 
   if (exportCsvBtn) exportCsvBtn.addEventListener('click', (e) => { e.stopPropagation(); exportAnalyticsCSV(); exportMenu.style.display='none'; });
   if (exportPngBtn) exportPngBtn.addEventListener('click', (e) => { e.stopPropagation(); exportChartsPNG(); exportMenu.style.display='none'; });
   if (exportPdfBtn) exportPdfBtn.addEventListener('click', (e) => { e.stopPropagation(); exportAnalyticsPDF(); exportMenu.style.display='none'; });
+
+
+
+
+  document.addEventListener('click', () => { if (exportMenu) exportMenu.style.display = 'none'; });
+
+  if (exportCsvBtn) exportCsvBtn.addEventListener('click', (e) => { e.stopPropagation(); exportAnalyticsCSV(); exportMenu.style.display='none'; });
+  if (exportPngBtn) exportPngBtn.addEventListener('click', (e) => { e.stopPropagation(); exportChartsPNG(); exportMenu.style.display='none'; });
+  if (exportPdfBtn) exportPdfBtn.addEventListener('click', (e) => { e.stopPropagation(); exportAnalyticsPDF(); exportMenu.style.display='none'; });
+
 
 
   // Notifications init
@@ -3364,7 +3440,7 @@ function updateAnalyticsDashboard() {
 
   const ctaAddSubject = document.getElementById('ctaAddSubject');
   if (ctaAddSubject) ctaAddSubject.addEventListener('click', () => { const s = document.getElementById('subjectInputForm'); if (s) { s.style.display='grid'; s.querySelector('input')?.focus(); } });
->>>>>>> 054ebbbb9cecb4be9ec267ac3d1e445c31708ce6
+
 
   document.getElementById("logStudyBtn")?.addEventListener("click", () => {
     logStudyMinutes(25);
@@ -4787,6 +4863,7 @@ function renderVault() {
 
     vaultFilesGrid.appendChild(card);
   });
+
 }
 
   // ----------------------
@@ -4934,3 +5011,10 @@ function renderVault() {
     if (boardBtn) boardBtn.addEventListener('click', () => setTimeout(updateSyllabusVisibility, 100));
     if (listBtn) listBtn.addEventListener('click', () => setTimeout(updateSyllabusVisibility, 100));
   });
+
+
+}
+
+}
+
+

@@ -1273,6 +1273,7 @@ body.light .topbar-left h2 {
   font-size: 11px;
 }
 
+
 /* Subject pill shown on task cards */
 .subject-pill {
   display: inline-flex;
@@ -1348,6 +1349,7 @@ body.light .topbar-left h2 {
   .timetable-grid { grid-template-columns: 1fr; }
   .timetable-form { flex-direction:column; align-items:stretch; }
 }
+
 
 /* DAILY QUEST */
 
@@ -6041,6 +6043,7 @@ body.light .drag-handle:hover {
   flex-direction: column;
   gap: 6px;
 
+
 }
 
 .footer-credit {
@@ -6053,6 +6056,21 @@ body.light .drag-handle:hover {
   color: #ef4444;
   margin: 0 6px;
 }
+
+
+}
+
+.footer-credit {
+  font-size: 12px;
+  color: var(--text-light);
+  opacity: 0.9;
+}
+
+.footer-credit .heart {
+  color: #ef4444;
+  margin: 0 6px;
+}
+
 
 
 }
