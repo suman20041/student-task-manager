@@ -1459,6 +1459,8 @@ function createTaskEl(task) {
   const pri = task.priority || "Medium";
   const catEmoji = getCategoryEmoji(task.category);
   const tags = getTaskTags(task);
+  const subjectColor = getSubjectColor(task.category);
+  const subjectTextColor = getContrastColor(subjectColor);
 
   const subjectColor = getSubjectColor(task.category);
   const subjectTextColor = getContrastColor(subjectColor);
