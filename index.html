@@ -2070,31 +2070,77 @@
     <i class="ri-team-line"></i> Open Study Together
   </button>
   <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+  <script src="storage.js"></script>
   <script src="script.js"></script>
   <script src="toast.js"></script>
-  <script src="badges.js"></script>
-  <script src="sidebar-toggle.js"></script>
-  <!-- Minimal Timetable Manager -->
-  <section id="timetable-section" class="card" style="margin:16px;">
-    <h2 style="margin:0 0 8px 0;">Timetable</h2>
-    <div class="timetable-form" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
-      <input id="ttSubjectInput" placeholder="Subject (e.g., Math)" style="flex:1;min-width:160px;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);" />
-      <select id="ttDaySelect" style="padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);">
-        <option value="mon">Mon</option>
-        <option value="tue">Tue</option>
-        <option value="wed">Wed</option>
-        <option value="thu">Thu</option>
-        <option value="fri">Fri</option>
-        <option value="sat">Sat</option>
-        <option value="sun">Sun</option>
-      </select>
-      <input id="ttStartInput" type="time" style="padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);" />
-      <input id="ttEndInput" type="time" style="padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);" />
-      <button id="ttAddBtn" class="btn">Add</button>
-    </div>
-    <div id="timetableContainer" class="timetable-grid" aria-live="polite"></div>
-  </section>
   <script src="collaborative.js"></script>
+  <script>
+  /* ── Timetable Manager (single implementation, persisted) ── */
+  (function () {
+    var DAYS_ORDER = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+    function loadEntries() {
+      return window.TaskQuestStorage ? window.TaskQuestStorage.getTimetable() : (JSON.parse(localStorage.getItem('taskquest_v1.timetable')) || []);
+    }
+
+    function saveEntries(entries) {
+      if (window.TaskQuestStorage) { window.TaskQuestStorage.setTimetable(entries); }
+      else { localStorage.setItem('taskquest_v1.timetable', JSON.stringify(entries)); }
+    }
+
+    function render() {
+      var grid = document.getElementById('timetableGrid');
+      if (!grid) return;
+      var entries = loadEntries();
+      if (!entries.length) {
+        grid.innerHTML = '<p style="opacity:.5;padding:16px;">No sessions scheduled yet.</p>';
+        return;
+      }
+      var byDay = {};
+      entries.forEach(function (e) { (byDay[e.day] = byDay[e.day] || []).push(e); });
+      grid.innerHTML = DAYS_ORDER.filter(function (d) { return byDay[d]; }).map(function (day) {
+        var rows = byDay[day].sort(function (a, b) { return a.start.localeCompare(b.start); }).map(function (e) {
+          return '<div class="tt-entry" style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.04);margin-bottom:4px;">' +
+            '<span style="font-weight:600;min-width:90px;">' + e.start + ' – ' + e.end + '</span>' +
+            '<span style="flex:1;">' + escTT(e.subject) + '</span>' +
+            '<button onclick="window._ttDelete(' + e.id + ')" style="background:none;border:none;cursor:pointer;color:var(--danger,#ef4444);font-size:16px;" aria-label="Delete">✕</button>' +
+            '</div>';
+        }).join('');
+        return '<div style="margin-bottom:14px;"><h4 style="margin:0 0 6px 0;font-size:13px;opacity:.7;">' + day + '</h4>' + rows + '</div>';
+      }).join('');
+    }
+
+    function escTT(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    window._ttDelete = function (id) {
+      var entries = loadEntries().filter(function (e) { return e.id !== id; });
+      saveEntries(entries);
+      render();
+    };
+
+    function addEntry() {
+      var day     = (document.getElementById('ttDayInput') || {}).value;
+      var subject = (document.getElementById('ttSubjectInput') || {}).value.trim();
+      var start   = (document.getElementById('ttStartTimeInput') || {}).value;
+      var end     = (document.getElementById('ttEndTimeInput') || {}).value;
+      if (!day || !subject || !start || !end) { alert('Please fill in all timetable fields.'); return; }
+      if (start >= end) { alert('End time must be after start time.'); return; }
+      var entries = loadEntries();
+      entries.push({ id: Date.now(), day: day, subject: subject, start: start, end: end });
+      saveEntries(entries);
+      document.getElementById('ttSubjectInput').value = '';
+      document.getElementById('ttStartTimeInput').value = '';
+      document.getElementById('ttEndTimeInput').value = '';
+      render();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var btn = document.getElementById('addTimetableBtn');
+      if (btn) btn.addEventListener('click', addEntry);
+      render();
+    });
+  })();
+  </script>
 
   <button class="back-to-top-btn" id="backToTopBtn" aria-label="Back to top">
     <i class="ri-arrow-up-line"></i>

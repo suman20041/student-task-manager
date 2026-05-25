@@ -14,9 +14,11 @@ let collaborativeState = {
 // Load collaborative data on init
 function loadCollaborativeData() {
   try {
-    const saved = localStorage.getItem('collab_state');
+    const saved = window.TaskQuestStorage
+      ? window.TaskQuestStorage.getCollab()
+      : JSON.parse(localStorage.getItem('taskquest_v1.collab'));
     if (saved) {
-      collaborativeState = JSON.parse(saved);
+      collaborativeState = saved;
     }
   } catch (e) {
     console.error('Failed to load collaborative data:', e);
@@ -26,7 +28,11 @@ function loadCollaborativeData() {
 // Save collaborative data
 function saveCollaborativeData() {
   try {
-    localStorage.setItem('collab_state', JSON.stringify(collaborativeState));
+    if (window.TaskQuestStorage) {
+      window.TaskQuestStorage.setCollab(collaborativeState);
+    } else {
+      localStorage.setItem('taskquest_v1.collab', JSON.stringify(collaborativeState));
+    }
   } catch (e) {
     console.error('Failed to save collaborative data:', e);
   }

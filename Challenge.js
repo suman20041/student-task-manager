@@ -40,6 +40,28 @@ let state = {
   usedIndices: [],
 };
 
+// ── Persistence helpers ───────────────────────────────────────────────────
+function saveState() {
+  try {
+    if (window.TaskQuestStorage) {
+      window.TaskQuestStorage.setChallenge(state);
+    } else {
+      localStorage.setItem("taskquest_v1.challenge", JSON.stringify(state));
+    }
+  } catch (e) { /* storage full — ignore */ }
+}
+
+function loadState() {
+  try {
+    const saved = window.TaskQuestStorage
+      ? window.TaskQuestStorage.getChallenge()
+      : JSON.parse(localStorage.getItem("taskquest_v1.challenge"));
+    if (saved && typeof saved === "object") {
+      state = Object.assign(state, saved);
+    }
+  } catch (e) { /* corrupt data — use defaults */ }
+}
+
 function generateChallenge() {
   const btn = document.getElementById("randomBtn");
   btn.classList.add("spinning");
@@ -69,6 +91,7 @@ function generateChallenge() {
   card.classList.remove("hidden");
 
   addToActive(state.currentChallenge);
+  saveState();
 }
 
 function addToActive(challenge) {
@@ -109,6 +132,7 @@ function handleResponse() {
     checkBadges();
     renderActiveChallenges();
     renderCompletedChallenges();
+    saveState();
 
     setTimeout(() => {
       document.getElementById("challenge-card").classList.add("hidden");
@@ -189,3 +213,10 @@ function renderCompletedChallenges() {
 document.getElementById("user-input").addEventListener("keydown", function(e) {
   if (e.key === "Enter") handleResponse();
 });
+
+// ── Boot: restore persisted state ────────────────────────────────────────
+loadState();
+updatePoints();
+checkBadges();
+renderActiveChallenges();
+renderCompletedChallenges();
