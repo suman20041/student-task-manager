@@ -124,6 +124,11 @@
           <p>Completed</p>
         </div>
         <div class="stat-card">
+          <i class="ri-error-warning-fill"></i>
+          <h3 id="overdueCount">0</h3>
+          <p>Overdue</p>
+        </div>
+        <div class="stat-card">
           <i class="ri-fire-fill"></i>
           <h3 id="streakCount">0</h3>
           <p>Streak</p>
@@ -358,6 +363,7 @@
               <button class="filter-btn" data-filter="Practical">🧪 Practical</button>
               <button class="filter-btn" data-filter="Assignment">📝 Assignment</button>
               <button class="filter-btn" data-filter="Revision">📖 Revision</button>
+              <button class="filter-btn" id="filterOverdueBtn" data-filter="Overdue" title="Show overdue tasks"><i class="ri-error-warning-line"></i> Overdue</button>
 
               <!-- Sorting buttons -->
               <button class="filter-btn" id="sortByDeadline" data-sort="deadline" title="Sort by earliest deadline">

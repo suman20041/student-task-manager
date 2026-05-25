@@ -1,5 +1,6 @@
 // --- State Management ---
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+let activeFilter = 'All';
 
 // --- Selectors ---
 const taskForm = document.getElementById("taskForm");
@@ -14,6 +15,20 @@ const themeSwitcher = document.getElementById("themeSwitcher");
 document.addEventListener("DOMContentLoaded", () => {
   renderTasks();
   initTheme();
+  const filterOverdueBtn = document.getElementById('filterOverdueBtn');
+  if (filterOverdueBtn){
+    filterOverdueBtn.addEventListener('click', ()=>{
+      const isActive = filterOverdueBtn.classList.contains('active');
+      if (isActive){
+        filterOverdueBtn.classList.remove('active'); activeFilter = 'All';
+      } else {
+        // deactivate other filters briefly if needed
+        document.querySelectorAll('.filter-btn.active')?.forEach(b=>b.classList.remove('active'));
+        filterOverdueBtn.classList.add('active'); activeFilter = 'Overdue';
+      }
+      renderTasks();
+    });
+  }
 });
 
 // --- Core Functions ---
@@ -34,11 +49,14 @@ function addTask() {
   const date = `${now.getDate()} ${now.toLocaleString("default", { month: "long" })} ${now.getFullYear()}`;
   const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+  const deadlineVal = document.getElementById('deadlineInput')?.value || null;
+  const deadlineIso = deadlineVal ? new Date(deadlineVal).toISOString() : null;
   const newTask = {
     id: Date.now(),
     text: text,
     completed: false,
-    timestamp: `(${day}, ${date} at ${time})`
+    timestamp: `(${day}, ${date} at ${time})`,
+    deadline: deadlineIso
   };
 
   tasks.push(newTask);
@@ -73,24 +91,47 @@ function editTask(id) {
 }
 
 function saveAndRender() {
+  // compute overdue flags before saving
+  updateOverdueFlags();
   localStorage.setItem("tasks", JSON.stringify(tasks));
   renderTasks();
   // Notify other modules (badges, analytics) that tasks changed
   try { document.dispatchEvent(new CustomEvent('tasksUpdated')); } catch (e) {}
 }
 
+function updateOverdueFlags(){
+  const now = Date.now();
+  tasks = tasks.map(t => {
+    const copy = { ...t };
+    copy.overdue = false;
+    if (!copy.completed && copy.deadline){
+      try{
+        const d = new Date(copy.deadline).getTime();
+        if (!isNaN(d) && d < now) copy.overdue = true;
+      }catch(e){}
+    }
+    return copy;
+  });
+}
+
 function renderTasks() {
   taskList.innerHTML = "";
 
   tasks.forEach(task => {
+    // apply filter
+    if (activeFilter === 'Overdue' && !task.overdue) return;
+
     const li = document.createElement("li");
     if (task.completed) li.classList.add("completed");
+    if (task.overdue) li.classList.add('overdue');
 
+    const deadlineLabel = task.deadline ? new Date(task.deadline).toLocaleString() : '';
     li.innerHTML = `
       <input type="checkbox" ${task.completed ? "checked" : ""} onchange="toggleTask(${task.id})">
       <span>
         ${task.text}
         <small style="display: block; font-size: 0.75rem; opacity: 0.7;">${task.timestamp}</small>
+        ${deadlineLabel ? `<div class="task-deadline ${task.overdue ? 'overdue' : ''}">Due: ${deadlineLabel}</div>` : ''}
       </span>
       <div style="display: flex; gap: 5px;">
         <button onclick="editTask(${task.id})" style="padding: 0.5rem; font-size: 0.8rem;">Edit</button>
@@ -107,9 +148,17 @@ function renderTasks() {
 function updateStats() {
   const completedCount = tasks.filter(t => t.completed).length;
   const totalCount = tasks.length;
+  const overdueCount = tasks.filter(t => t.overdue).length;
 
   if (taskStats) {
     taskStats.innerText = `✅ ${completedCount} / ${totalCount} completed`;
+  }
+
+  const overdueEl = document.getElementById('overdueCount');
+  if (overdueEl) {
+    overdueEl.innerText = overdueCount;
+    const sc = overdueEl.closest('.stat-card');
+    if (sc) sc.classList.toggle('overdue', overdueCount>0);
   }
 
   if (celebration) {

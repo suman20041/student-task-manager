@@ -263,6 +263,19 @@ li.completed span {
   opacity: 0.6;
 }
 
+/* Overdue task visuals */
+li.overdue {
+  border-left: 4px solid #ef4444;
+  background: linear-gradient(90deg, rgba(239,68,68,0.03), transparent);
+}
+
+li .task-deadline.overdue {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.stat-card.overdue { color: #ef4444; }
+
 li input[type="checkbox"] {
   width: 1.25rem;
   height: 1.25rem;
