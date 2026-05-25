@@ -269,6 +269,14 @@ li.overdue {
   background: linear-gradient(90deg, rgba(239,68,68,0.03), transparent);
 }
 
+/* Dependency badges */
+.dep-badge {
+  display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; margin-left:8px;
+}
+.dep-badge.blocked { background: rgba(239,68,68,0.12); color: #ef4444; border:1px solid rgba(239,68,68,0.15); }
+.dep-badge.ready { background: rgba(34,197,94,0.08); color:#16a34a; border:1px solid rgba(34,197,94,0.08); }
+.dep-info { font-size:12px; opacity:0.85; margin-top:6px; }
+
 li .task-deadline.overdue {
   color: #ef4444;
   font-weight: 700;
