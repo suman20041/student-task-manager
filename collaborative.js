@@ -1,15 +1,46 @@
-// ==========================================================================
-// COLLABORATIVE STUDY ENVIRONMENT - FULL IMPLEMENTATION
-// ==========================================================================
+/**
+ * Collaborative Study Module
+ * Uses BroadcastChannel to simulate real-time interaction across browser tabs
+ */
 
-// Global collaborative state
-let collaborativeState = {
-  friends: [],
-  currentSession: null,
-  challenges: [],
-  sessionHistory: [],
-  joinedChallenges: []
-};
+const studyChannel = new BroadcastChannel('taskquest_study_room');
+const myTabId = Math.random().toString(36).substr(2, 9);
+const messagesContainer = document.getElementById('messagesContainer');
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+const onlineList = document.getElementById('onlineList');
+const statusSelect = document.getElementById('statusSelect');
+const teamMemberList = document.getElementById('teamMemberList');
+const memberSearchInput = document.getElementById('memberSearchInput');
+const addMemberBtn = document.getElementById('addMemberBtn');
+
+// Local User State
+let myProfile = JSON.parse(localStorage.getItem('quests_profile') || '{"name": "Anonymous Scholar"}');
+let chatHistory = JSON.parse(localStorage.getItem('quests_chat_history') || '[]');
+let teamMembers = JSON.parse(localStorage.getItem('quests_team_members') || '[]');
+let activePeers = {}; 
+
+function getMyStats() {
+    const xp = parseInt(localStorage.getItem('xp') || '0');
+    const streak = parseInt(localStorage.getItem('streak') || '0');
+    return {
+        xp: xp,
+        streak: streak,
+        level: Math.floor(xp / 300) + 1
+    };
+}
+
+
+// Helper to fetch simulated "Global" stats for a specific user name
+function getGlobalStatsFor(name) {
+    const globalLeaderboard = JSON.parse(localStorage.getItem('taskquest_leaderboard_v1') || '[]');
+    // Sort by score to calculate rank
+    const sorted = globalLeaderboard.sort((a, b) => b.score - a.score);
+    const index = sorted.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+    
+    if (index !== -1) {
+        const p = sorted[index];
+        return { ...p, rank: index + 1, level: Math.floor(p.score / 300) + 1 };
 
 // Load collaborative data on init
 function loadCollaborativeData() {
@@ -19,12 +50,29 @@ function loadCollaborativeData() {
       : JSON.parse(localStorage.getItem('taskquest_v1.collab'));
     if (saved) {
       collaborativeState = saved;
+
     }
-  } catch (e) {
-    console.error('Failed to load collaborative data:', e);
-  }
+    return null;
 }
 
+
+// 1. Initialization
+document.addEventListener('DOMContentLoaded', () => {
+    renderChatHistory();
+    renderTeamMembers();
+    announcePresence('joined');
+    
+    // Pulse updates every 5 seconds to keep stats fresh
+    setInterval(() => announcePresence('pulse'), 5000);
+
+    // Load current task from main storage if available
+    const tasks = JSON.parse(localStorage.getItem('quests') || '[]');
+    const activeTask = tasks.find(t => !t.completed);
+    if (activeTask) {
+        document.getElementById('myActiveTask').textContent = activeTask.text;
+    }
+});
+=======
 // Save collaborative data
 function saveCollaborativeData() {
   try {
@@ -38,45 +86,46 @@ function saveCollaborativeData() {
   }
 }
 
-// ==========================================================================
-// FRIEND MANAGEMENT FUNCTIONS
-// ==========================================================================
 
-function addFriend(friendName) {
-  if (!friendName || friendName.trim() === '') {
-    announce('Please enter a friend name.');
-    return;
-  }
+// 2. Messaging Logic
+chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const msg = chatInput.value.trim();
+    if (msg) sendMessage(msg);
+});
 
-  const friend = {
-    id: Date.now(),
-    name: friendName.trim(),
-    addedAt: Date.now(),
-    lastActive: Date.now(),
-    score: Math.round(Math.random() * 500) + 100, // Simulated score
-    tasksCompleted: Math.round(Math.random() * 50) + 5,
-    studyMinutes: Math.round(Math.random() * 200) + 30,
-    status: 'online'
-  };
+// Quick action pills
+document.querySelectorAll('.action-pill').forEach(btn => {
+    btn.addEventListener('click', () => sendMessage(btn.dataset.msg));
+});
 
-  collaborativeState.friends.push(friend);
-  saveCollaborativeData();
-  renderFriendsList();
-  announce(`Added ${friendName} as a study friend!`);
-  showTaskPopup(`${friendName} added! 👥`);
+
+function sendMessage(text) {
+    const messageObj = {
+        id: Date.now(),
+        sender: myProfile.name,
+        text: text,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        type: 'chat'
+    };
+
+    // Send to other tabs
+    studyChannel.postMessage(messageObj);
+    
+    // Add to local UI
+    appendMessage(messageObj, true);
+    
+    // Save to history
+    chatHistory.push(messageObj);
+    localStorage.setItem('quests_chat_history', JSON.stringify(chatHistory.slice(-50)));
+    
+    chatInput.value = '';
+    chatInput.focus();
 }
 
-function removeFriend(friendId) {
-  if (confirm('Remove this friend?')) {
-    collaborativeState.friends = collaborativeState.friends.filter(f => f.id !== friendId);
-    if (collaborativeState.currentSession && collaborativeState.currentSession.partnerId === friendId) {
-      endCollabSession();
-    }
-    saveCollaborativeData();
-    renderFriendsList();
-    announce('Friend removed.');
-  }
-}
+// 3. Listen for Incoming Updates
+studyChannel.onmessage = (event) => {
+    const data = event.data;
 
 function renderFriendsList() {
   const grid = document.getElementById('friendsListGrid');
@@ -188,178 +237,77 @@ function startCollabSession() {
   });
 }
 
-function selectSessionPartner(partnerId, partnerName) {
-  const friend = collaborativeState.friends.find(f => f.id === partnerId);
-  if (!friend) return;
 
-  collaborativeState.currentSession = {
-    id: Date.now(),
-    partnerId: partnerId,
-    partnerName: partnerName,
-    startTime: Date.now(),
-    endTime: null,
-    sharedTasks: [],
-    myProgress: 0,
-    partnerProgress: 0
-  };
-
-  saveCollaborativeData();
-  renderCollabSessionInfo();
-  updateCollabLeaderboard();
-  
-  announce(`Started study session with ${partnerName}!`);
-  showTaskPopup(`Studying with ${partnerName}! 🎓`);
-
-  // Close any open modals
-  document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
-}
-
-function inviteFriendToSession(friendId, friendName) {
-  selectSessionPartner(friendId, friendName);
-}
-
-function endCollabSession() {
-  if (!collaborativeState.currentSession) return;
-
-  const duration = Math.round((Date.now() - collaborativeState.currentSession.startTime) / 60000);
-  collaborativeState.currentSession.endTime = Date.now();
-  
-  collaborativeState.sessionHistory.push({
-    ...collaborativeState.currentSession,
-    duration: duration,
-    finalScore: getTodayProductivityScore()
-  });
-
-  collaborativeState.currentSession = null;
-  saveCollaborativeData();
-  renderCollabSessionInfo();
-  
-  announce(`Study session ended! Duration: ${duration} minutes.`);
-  showTaskPopup(`Session ended! Great work! 🎉`);
-}
-
-function renderCollabSessionInfo() {
-  const userEl = document.getElementById('collabSessionUser');
-  const partnerEl = document.getElementById('collabSessionPartner');
-  const durationEl = document.getElementById('collabSessionDuration');
-
-  if (!collaborativeState.currentSession) {
-    if (userEl) userEl.textContent = 'Not in session';
-    if (partnerEl) partnerEl.textContent = '—';
-    if (durationEl) durationEl.textContent = '0 min';
-    return;
-  }
-
-  const session = collaborativeState.currentSession;
-  const duration = Math.round((Date.now() - session.startTime) / 60000);
-
-  if (userEl) userEl.textContent = profile.name || 'You';
-  if (partnerEl) partnerEl.textContent = session.partnerName;
-  if (durationEl) durationEl.textContent = `${duration} min`;
-
-  // Update buttons
-  const startBtn = document.getElementById('startCollabSessionBtn');
-  const stopBtn = document.getElementById('stopCollabSessionBtn');
-  if (startBtn && stopBtn) {
-    startBtn.style.display = 'none';
-    stopBtn.style.display = 'flex';
-  }
-}
-
-// Update session duration every 30 seconds
-setInterval(() => {
-  if (collaborativeState.currentSession) {
-    renderCollabSessionInfo();
-  }
-}, 30000);
-
-// ==========================================================================
-// PRODUCTIVITY CHALLENGES FUNCTIONS
-// ==========================================================================
-
-function createChallenge() {
-  const form = document.getElementById('createChallengeForm');
-  if (!form) return;
-
-  const title = document.getElementById('challengeTitleInput').value.trim();
-  const type = document.getElementById('challengeTypeSelect').value;
-  const days = parseInt(document.getElementById('challengeDaysInput').value) || 7;
-
-  if (!title) {
-    announce('Please enter a challenge name.');
-    return;
-  }
-
-  const challenge = {
-    id: Date.now(),
-    title: title,
-    type: type,
-    duration: days,
-    startDate: Date.now(),
-    endDate: Date.now() + days * 86400000,
-    creator: profile.name || 'Unknown',
-    participants: [
-      {
-        id: 'me',
-        name: profile.name || 'You',
-        score: 0,
-        tasksCompleted: 0,
-        studyMinutes: 0,
-        streak: streak
-      }
-    ]
-  };
-
-  collaborativeState.challenges.push(challenge);
-  collaborativeState.joinedChallenges.push(challenge.id);
-  saveCollaborativeData();
-  renderChallenges();
-
-  form.style.display = 'none';
-  document.getElementById('challengeTitleInput').value = '';
-  
-  announce(`Challenge "${title}" created!`);
-  showTaskPopup(`Challenge created! 🏆`);
-}
-
-function joinChallenge(challengeId) {
-  const challenge = collaborativeState.challenges.find(c => c.id === challengeId);
-  if (!challenge) return;
-
-  if (collaborativeState.joinedChallenges.includes(challengeId)) {
-    announce('You already joined this challenge!');
-    return;
-  }
-
-  challenge.participants.push({
-    id: 'me',
-    name: profile.name || 'You',
-    score: 0,
-    tasksCompleted: 0,
-    studyMinutes: 0,
-    streak: streak
-  });
-
-  collaborativeState.joinedChallenges.push(challengeId);
-  saveCollaborativeData();
-  renderChallenges();
-  
-  announce(`Joined challenge: ${challenge.title}`);
-  showTaskPopup(`Joined! Let's compete! 🚀`);
-}
-
-function leaveChallenge(challengeId) {
-  if (confirm('Leave this challenge?')) {
-    const challenge = collaborativeState.challenges.find(c => c.id === challengeId);
-    if (challenge) {
-      challenge.participants = challenge.participants.filter(p => p.id !== 'me');
+    if (data.type === 'chat') {
+        appendMessage(data, false);
+        playNotifySound();
+    } else if (data.type === 'presence' && data.tabId !== myTabId) {
+        updatePeerPresence(data);
     }
-    collaborativeState.joinedChallenges = collaborativeState.joinedChallenges.filter(id => id !== challengeId);
-    saveCollaborativeData();
-    renderChallenges();
-    announce('Challenge left.');
-  }
+};
+
+function appendMessage(msg, isMe) {
+    const div = document.createElement('div');
+    div.className = `message ${isMe ? 'msg-sent' : 'msg-received'}`;
+    
+    div.innerHTML = `
+        <span class="msg-meta">${isMe ? 'You' : msg.sender} • ${msg.time}</span>
+        <div class="msg-content">${escapeChatHtml(msg.text)}</div>
+    `;
+
+    messagesContainer.appendChild(div);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
+
+function renderChatHistory() {
+    chatHistory.forEach(msg => {
+        // We don't know for sure if it was "me" in history unless we check sender name
+        const isMe = msg.sender === myProfile.name;
+        appendMessage(msg, isMe);
+    });
+}
+
+// 4. Presence & Status System
+function announcePresence(action) {
+    const stats = getMyStats();
+    studyChannel.postMessage({
+        type: 'presence',
+        tabId: myTabId,
+        user: myProfile.name,
+        status: statusSelect.value,
+        xp: stats.xp,
+        level: stats.level,
+        streak: stats.streak,
+        action: action,
+        timestamp: Date.now()
+    });
+    updateLeaderboard(); 
+}
+
+statusSelect.addEventListener('change', () => {
+    document.getElementById('currentUserStatus').textContent = statusSelect.options[statusSelect.selectedIndex].text;
+    announcePresence('status_change');
+});
+
+function updatePeerPresence(data) {
+    if (data.action === 'left') {
+        delete activePeers[data.tabId];
+    } else {
+        activePeers[data.tabId] = data;
+    }
+    renderOnlineScholars();
+    updateLeaderboard();
+}
+
+
+function renderOnlineScholars() {
+    onlineList.innerHTML = '';
+    const peerIds = Object.keys(activePeers);
+    
+    if (peerIds.length === 0) {
+        onlineList.innerHTML = '<div class="empty-state-mini">No other sessions active</div>';
+        return;
+    }
 
 function renderChallenges() {
   const grid = document.getElementById('challengesGrid');
@@ -409,69 +357,38 @@ function renderChallenges() {
   });
 }
 
-// ==========================================================================
-// REAL-TIME LEADERBOARD FUNCTIONS
-// ==========================================================================
 
-function updateCollabLeaderboard() {
-  const entries = [];
+    peerIds.forEach(id => {
+        const peer = activePeers[id];
+        if (Date.now() - peer.timestamp > 15000) { delete activePeers[id]; return; }
 
-  // Add current user
-  entries.push({
-    rank: 0,
-    name: profile.name || 'You',
-    score: getTodayProductivityScore(),
-    tasks: tasks.filter(t => t.completed).length,
-    studyTime: Math.round(getCumulativeStudyMinutes()),
-    isMe: true
-  });
-
-  // Add friends
-  collaborativeState.friends.forEach(friend => {
-    entries.push({
-      rank: 0,
-      name: friend.name,
-      score: friend.score,
-      tasks: friend.tasksCompleted,
-      studyTime: friend.studyMinutes,
-      isMe: false
+        const div = document.createElement('div');
+        div.className = 'online-user glass';
+        div.innerHTML = `
+            <div class="peer-info">
+                <div class="peer-main">
+                    <strong>${escapeChatHtml(peer.user)}</strong>
+                    <span class="peer-status-dot"></span>
+                </div>
+                <div class="peer-meta">Lvl ${peer.level} • ${peer.status}</div>
+            </div>
+            <div class="peer-streak"><i class="ri-fire-fill"></i> ${peer.streak}</div>
+        `;
+        onlineList.appendChild(div);
     });
-  });
-
-  // Sort by score descending
-  entries.sort((a, b) => b.score - a.score);
-
-  // Add ranks
-  entries.forEach((e, idx) => {
-    e.rank = idx + 1;
-  });
-
-  renderLeaderboard(entries);
 }
 
-function renderLeaderboard(entries) {
-  const board = document.getElementById('collabLeaderboard');
-  if (!board) return;
-  board.innerHTML = '';
+function updateLeaderboard() {
+    const board = document.getElementById('collabLeaderboard');
+    if (!board) return;
 
-  entries.forEach(entry => {
-    const row = document.createElement('div');
-    row.className = `leaderboard-row ${entry.isMe ? 'highlight-row' : ''}`;
-    row.innerHTML = `
-      <div class="row-rank">#${entry.rank}</div>
-      <div class="row-player">
-        <div class="player-name">${escapeHtml(entry.name)}</div>
-        <div class="player-subtitle">${entry.score} pts • ${entry.tasks} tasks • ${entry.studyTime}m study</div>
-      </div>
-      <div class="row-score" style="font-weight: 600; color: var(--primary);">${entry.score}</div>
-    `;
-    board.appendChild(row);
-  });
-}
 
-// ==========================================================================
-// EVENT LISTENERS & INITIALIZATION
-// ==========================================================================
+    const myStats = getMyStats();
+    
+    // Build base list with "You" and active peers
+    let contestants = [
+        { name: myProfile.name + " (You)", xp: myStats.xp, level: myStats.level, streak: myStats.streak, isMe: true }
+    ];
 
 function setupCollabDelegation() {
   const friendsGrid = document.getElementById('friendsListGrid');
@@ -521,143 +438,124 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (confirmAddFriendBtn) {
-    confirmAddFriendBtn.addEventListener('click', () => {
-      addFriend(friendNameInput.value);
-      friendNameInput.value = '';
-      addFriendForm.style.display = 'none';
+
+    // Add Active Scholars (currently online tabs)
+    Object.values(activePeers).forEach(p => {
+        contestants.push({ name: p.user, xp: p.xp, level: p.level, streak: p.streak, isMe: false });
     });
-  }
 
-  if (cancelAddFriendBtn) {
-    cancelAddFriendBtn.addEventListener('click', () => {
-      addFriendForm.style.display = 'none';
+    // Add Team Members stats even if offline (to see their progress)
+    teamMembers.forEach(member => {
+        const stats = getGlobalStatsFor(member.name);
+        // Avoid duplicating if they are already in the "Active" list
+        if (stats && !contestants.some(c => c.name.toLowerCase() === member.name.toLowerCase())) {
+            contestants.push({ name: member.name, xp: stats.score, level: stats.level, streak: stats.streak, isMe: false, offline: true });
+        }
     });
-  }
 
-  if (friendNameInput) {
-    friendNameInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        confirmAddFriendBtn.click();
-      }
+    // Rank by XP descending
+    contestants.sort((a, b) => b.xp - a.xp);
+
+    board.innerHTML = '';
+    contestants.forEach((player, index) => {
+        const row = document.createElement('div');
+        row.className = `leaderboard-item ${player.isMe ? 'highlight' : ''}`;
+        const rankIcon = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : `#${index + 1}`));
+        
+        row.innerHTML = `
+            <div class="rank">${rankIcon}</div>
+            <div class="player-info">
+                <span class="name">${escapeChatHtml(player.name)}</span>
+                <div class="stats-mini">
+                    <span class="lvl">Lvl ${player.level}</span>
+                    <span class="streak"><i class="ri-fire-fill"></i> ${player.streak}</span>
+                </div>
+            </div>
+            <div class="score">${player.xp} XP</div>
+        `;
+        board.appendChild(row);
     });
-  }
 
-  // Session buttons
-  const startBtn = document.getElementById('startCollabSessionBtn');
-  const stopBtn = document.getElementById('stopCollabSessionBtn');
-  const inviteBtn = document.getElementById('inviteFriendBtn');
+    // Team Energy bar: collective power of everyone's streaks
+    const totalEnergy = Math.min(100, contestants.reduce((acc, p) => acc + p.streak, 0) * 5);
+    document.getElementById('teamEnergy').style.width = totalEnergy + '%';
+}
 
-  if (startBtn) startBtn.addEventListener('click', startCollabSession);
-  if (stopBtn) stopBtn.addEventListener('click', endCollabSession);
-  if (inviteBtn) {
-    inviteBtn.addEventListener('click', () => {
-      if (!collaborativeState.currentSession) {
-        startCollabSession();
-      } else {
-        announce('Already in a study session. End it first.');
-      }
-    });
-  }
-
-  // Challenge buttons
-  const createChallengeBtn = document.getElementById('createChallengeBtn');
-  const confirmCreateBtn = document.getElementById('confirmCreateChallengeBtn');
-  const cancelChallengeBtn = document.getElementById('cancelChallengeBtn');
-  const createChallengeForm = document.getElementById('createChallengeForm');
-
-  if (createChallengeBtn) {
-    createChallengeBtn.addEventListener('click', () => {
-      createChallengeForm.style.display = createChallengeForm.style.display === 'block' ? 'none' : 'block';
-    });
-  }
-
-  if (confirmCreateBtn) {
-    confirmCreateBtn.addEventListener('click', createChallenge);
-  }
-
-  if (cancelChallengeBtn) {
-    cancelChallengeBtn.addEventListener('click', () => {
-      createChallengeForm.style.display = 'none';
-    });
-  }
-
-  // Leaderboard refresh
-  const refreshBtn = document.getElementById('refreshLeaderboardBtn');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
-      updateCollabLeaderboard();
-      announce('Leaderboard updated!');
-    });
-  }
-
-  const goToStudyBtn = document.getElementById('goToStudyTogetherBtn');
-  const openFab = document.getElementById('openStudyTogetherFab');
-  const openStudyTab = () => {
-    const tab = document.getElementById('tabBtnCollaborative');
-    if (tab) {
-      tab.click();
-      tab.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+document.getElementById('clearChat').addEventListener('click', () => {
+    if (confirm('Clear chat history?')) {
+        localStorage.removeItem('quests_chat_history');
+        messagesContainer.innerHTML = '';
+        chatHistory = [];
     }
-  };
-
-  if (goToStudyBtn) {
-    goToStudyBtn.addEventListener('click', openStudyTab);
-  }
-
-  if (openFab) {
-    openFab.addEventListener('click', openStudyTab);
-  }
-
-  // Initial renders
-  renderFriendsList();
-  renderChallenges();
-  updateCollabLeaderboard();
-  renderCollabSessionInfo();
-  revealCollaborativeTab();
-  enableTabWheelScroll();
-  initTabScrollButtons();
 });
 
-function revealCollaborativeTab() {
-  const collabTab = document.getElementById('tabBtnCollaborative');
-  const navTabs = document.querySelector('.nav-tabs');
-  if (!collabTab || !navTabs) return;
-
-  const tabRect = collabTab.getBoundingClientRect();
-  const navRect = navTabs.getBoundingClientRect();
-  if (tabRect.right > navRect.right || tabRect.left < navRect.left) {
-    collabTab.scrollIntoView({ behavior: 'smooth', inline: 'center' });
-  }
+function escapeChatHtml(text) {
+    const m = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return text.replace(/[&<>"']/g, f => m[f]);
 }
 
-function enableTabWheelScroll() {
-  const navTabs = document.querySelector('.nav-tabs');
-  if (!navTabs) return;
-  navTabs.addEventListener('wheel', (event) => {
-    if (event.deltaY === 0) return;
-    event.preventDefault();
-    navTabs.scrollLeft += event.deltaY;
-  }, { passive: false });
+function playNotifySound() { try { const a = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); a.volume = 0.2; a.play(); } catch(e){} }
+
+// 5. Team Management Logic
+addMemberBtn.addEventListener('click', () => {
+    const name = memberSearchInput.value.trim();
+    if (!name) return;
+
+    // Check if already exists
+    if (teamMembers.some(m => m.name.toLowerCase() === name.toLowerCase())) {
+        alert("Member is already in your team.");
+        return;
+    }
+
+    teamMembers.push({ id: Date.now(), name: name });
+    saveTeamMembers();
+    renderTeamMembers();
+    memberSearchInput.value = '';
+});
+
+memberSearchInput.addEventListener('input', () => {
+    renderTeamMembers(memberSearchInput.value.trim());
+});
+
+function saveTeamMembers() {
+    localStorage.setItem('quests_team_members', JSON.stringify(teamMembers));
 }
 
-function initTabScrollButtons() {
-  const navTabs = document.querySelector('.nav-tabs');
-  const leftBtn = document.getElementById('tabsScrollLeft');
-  const rightBtn = document.getElementById('tabsScrollRight');
+function renderTeamMembers(filter = "") {
+    teamMemberList.innerHTML = '';
+    const filtered = teamMembers.filter(m => m.name.toLowerCase().includes(filter.toLowerCase()));
 
-  if (!navTabs || !leftBtn || !rightBtn) return;
+    document.getElementById('noMembersMsg').style.display = filtered.length ? 'none' : 'block';
 
-  leftBtn.addEventListener('click', () => {
-    navTabs.scrollBy({ left: -240, behavior: 'smooth' });
-  });
+    filtered.forEach(member => {
+        const stats = getGlobalStatsFor(member.name);
+        const div = document.createElement('div');
+        div.className = 'member-item';
+        
+        let statsHtml = `<div class="member-no-stats">Searching records...</div>`;
+        if (stats) {
+            statsHtml = `
+                <div class="member-stats-mini">
+                    <span title="Level">Lvl ${stats.level}</span>
+                    <span title="Streak"><i class="ri-fire-fill"></i> ${stats.streak}</span>
+                    <span title="Global Rank">Rank #${stats.rank}</span>
+                </div>
+            `;
+        }
 
-  rightBtn.addEventListener('click', () => {
-    navTabs.scrollBy({ left: 240, behavior: 'smooth' });
-  });
+        div.innerHTML = `
+            <div class="member-identity">
+                <span class="member-name">${escapeChatHtml(member.name)}</span>
+                ${statsHtml}
+            </div>
+            <i class="ri-delete-bin-line delete-member-btn" onclick="removeMember(${member.id})"></i>
+        `;
+        teamMemberList.appendChild(div);
+    });
 }
 
-// Update leaderboard every 60 seconds (real-time simulation)
-setInterval(() => {
-  updateCollabLeaderboard();
-}, 60000);
+window.removeMember = (id) => {
+    teamMembers = teamMembers.filter(m => m.id !== id);
+    saveTeamMembers();
+    renderTeamMembers(memberSearchInput.value.trim());
+};
