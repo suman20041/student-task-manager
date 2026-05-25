@@ -732,6 +732,26 @@ li small {
   margin-bottom: 10px;
 }
 
+/* Collapsible sidebar - minimal styles */
+body.sidebar-collapsed .sidebar {
+  width: 72px !important;
+  padding: 14px 8px !important;
+}
+
+body.sidebar-collapsed .sidebar .logo-box > div:not(.logo) { display: none !important; }
+body.sidebar-collapsed .sidebar .profile-card { padding: 8px 0; }
+body.sidebar-collapsed .sidebar .profile-card .avatar { margin: 0 auto; }
+body.sidebar-collapsed .sidebar .stats-grid, body.sidebar-collapsed .sidebar .achievement-card, body.sidebar-collapsed .sidebar .pomodoro-card, body.sidebar-collapsed .sidebar .streak-tracker-card { display: none !important; }
+
+/* Shift main content to account for collapsed sidebar on wide screens */
+@media (min-width: 1000px) {
+  body.sidebar-collapsed .main-content { margin-left: 88px; transition: margin 0.28s ease; }
+}
+
+/* Icon-only mode for badges */
+body.sidebar-collapsed .badges { display:flex; gap:8px; justify-content:center; }
+
+
 .enhanced-empty { display:flex; flex-direction:column; align-items:center; gap:12px; padding:28px; }
 .enhanced-empty svg { max-width:160px; height:auto; transform-origin:center; transition: transform 220ms ease; }
 .enhanced-empty:hover svg { transform: translateY(-6px) rotate(-1deg); }
