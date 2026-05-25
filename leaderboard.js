@@ -1,3 +1,4 @@
+"use strict";
 (function() {
   // Use unified storage keys when available, fall back to legacy keys
   const _S = window.TaskQuestStorage;
