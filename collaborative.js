@@ -72,7 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('myActiveTask').textContent = activeTask.text;
     }
 });
-=======
 // Save collaborative data
 function saveCollaborativeData() {
   try {
@@ -236,6 +235,13 @@ function startCollabSession() {
     if (e.target === sessionModal) sessionModal.remove();
   });
 }
+    if (data.type === 'chat') {
+        appendMessage(data, false);
+        playNotifySound();
+    } else if (data.type === 'presence' && data.tabId !== myTabId) {
+        updatePeerPresence(data);
+    }
+};
 
 
     if (data.type === 'chat') {
