@@ -7841,3 +7841,5 @@ body.light .drag-handle:hover {
 .add-topic-row {
   display: flex;
   gap: 8px;
+/* Mobile Fixes for TaskQuest */
+@media (max-width: 480px) { .pomodoro-card .timer { font-size: 2.5rem; } .pomodoro-card .timer-buttons button { width: 40px; height: 40px; font-size: 1.2rem; } .stats-grid { grid-template-columns: 1fr 1fr; } }
