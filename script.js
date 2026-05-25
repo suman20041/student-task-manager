@@ -1,6 +1,7 @@
 // --- State Management ---
-let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-let activeFilter = 'All';
+// Migrate any legacy keys to the unified taskquest_v1 namespace on first load
+if (window.TaskQuestStorage) { window.TaskQuestStorage.migrate(); }
+let tasks = (window.TaskQuestStorage ? window.TaskQuestStorage.getTasks() : JSON.parse(localStorage.getItem("tasks"))) || [];
 
 // --- Selectors ---
 const taskForm = document.getElementById("taskForm");
@@ -110,9 +111,11 @@ function editTask(id) {
 }
 
 function saveAndRender() {
-  // compute overdue flags before saving
-  updateOverdueFlags();
-  localStorage.setItem("tasks", JSON.stringify(tasks));
+  if (window.TaskQuestStorage) {
+    window.TaskQuestStorage.setTasks(tasks);
+  } else {
+    localStorage.setItem("taskquest_v1.tasks", JSON.stringify(tasks));
+  }
   renderTasks();
   // Notify other modules (badges, analytics) that tasks changed
   try { document.dispatchEvent(new CustomEvent('tasksUpdated')); } catch (e) {}
@@ -202,7 +205,7 @@ function updateStats() {
 // --- Theme Management ---
 
 function initTheme() {
-  const savedTheme = localStorage.getItem("theme") || "light";
+  const savedTheme = (window.TaskQuestStorage ? window.TaskQuestStorage.getTheme() : localStorage.getItem("taskquest_v1.theme")) || "cosmic";
   document.documentElement.setAttribute("data-theme", savedTheme);
 
   if (themeSwitcher) {
@@ -210,7 +213,11 @@ function initTheme() {
     themeSwitcher.addEventListener("change", (e) => {
       const selectedTheme = e.target.value;
       document.documentElement.setAttribute("data-theme", selectedTheme);
-      localStorage.setItem("theme", selectedTheme);
+      if (window.TaskQuestStorage) {
+        window.TaskQuestStorage.setTheme(selectedTheme);
+      } else {
+        localStorage.setItem("taskquest_v1.theme", selectedTheme);
+      }
     });
   }
 }
