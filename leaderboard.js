@@ -168,6 +168,7 @@
   }
 
   function addOrUpdatePlayer() {
+    if (!elements.playerNameInput) return;
     const name = elements.playerNameInput.value.trim();
     const score = Number(elements.playerScoreInput.value) || 0;
     const completedTasks = Number(elements.playerCompletedInput.value) || 0;
