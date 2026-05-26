@@ -16,6 +16,29 @@
   --radius: 12px;
 }
 
+/* Light mode (default already exists) */
+
+.dark-mode {
+  background-color: #121212;
+  color: white;
+}
+
+.dark-mode .card,
+.dark-mode .container,
+.dark-mode .task-box {
+  background-color: #1e1e1e;
+  color: white;
+}
+
+.dark-mode input,
+.dark-mode select,
+.dark-mode button {
+  background-color: #2c2c2c;
+  color: white;
+  border: 1px solid #555;
+}
+
+
 [data-theme="dark"] {
   --bg-color: #0f172a;
   --text-color: #f1f5f9;
