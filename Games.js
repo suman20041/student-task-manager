@@ -1,6 +1,7 @@
 /* ===== GLOBAL STATE ===== */
 const _S = window.TaskQuestStorage;
 let globalScore = _S ? _S.getCoins() : 0;
+if (isNaN(globalScore)) globalScore = 0;
 let globalStreak = _S ? _S.getStreak() : 0;
 
 function addScore(n){
