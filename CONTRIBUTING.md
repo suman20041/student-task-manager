@@ -78,6 +78,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
    - Feature works as expected
    - No console errors
    - Responsive on mobile (resize window to < 480px)
+   - LocalStorage keys persist state values correctly (verify via DevTools Application tab)
 
 5. **Commit your changes** with a descriptive message (see below).
 
