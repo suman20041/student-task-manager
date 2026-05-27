@@ -79,11 +79,21 @@
       const profile = JSON.parse(localStorage.getItem(PROFILE_KEY) || "null");
       const tasks = JSON.parse(localStorage.getItem(TASKS_KEY) || "[]");
       const completedTasks = Array.isArray(tasks) ? tasks.filter(task => task.completed).length : 0;
-      const coins = parseInt(localStorage.getItem(COINS_KEY), 10) || 0;
-      const streak = parseInt(localStorage.getItem(STREAK_KEY), 10) || 0;
-      const xp = parseInt(localStorage.getItem(XP_KEY), 10) || 0;
+
+      // parseInt(null, 10) returns NaN — the || 0 guard does NOT catch it
+      // because NaN is falsy but the || short-circuit only fires for falsy
+      // values produced by the overall expression, not NaN from parseInt.
+      // NaN propagates through the arithmetic and makes score === NaN,
+      // breaking the sort comparator and displaying "NaN" in the UI.
+      // Number() correctly coerces null, "null", undefined, and "" to 0.
+      const coins  = Math.max(0, Number(localStorage.getItem(COINS_KEY))  || 0);
+      const streak = Math.max(0, Number(localStorage.getItem(STREAK_KEY)) || 0);
+      const xp     = Math.max(0, Number(localStorage.getItem(XP_KEY))     || 0);
+
       const name = profile?.name || "You";
-      const score = coins + completedTasks * 30 + streak * 20 + Math.floor(xp / 10);
+      const rawScore = coins + completedTasks * 30 + streak * 20 + Math.floor(xp / 10);
+      // Final guard: if any operand was still NaN for any reason, fall back to 0.
+      const score = Number.isFinite(rawScore) ? rawScore : 0;
 
       return {
         id: "me",
@@ -98,16 +108,29 @@
     }
   }
 
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function buildRow(entry, rank, highlight) {
     const row = document.createElement("div");
     row.className = `leaderboard-row${highlight ? " highlight-row" : ""}`;
+    const safeName  = escapeHtml(entry.name);
+    const safeScore = Number.isFinite(entry.score) ? entry.score : 0;
+    const safeTasks  = Number.isFinite(entry.completedTasks) ? entry.completedTasks : 0;
+    const safeStreak = Number.isFinite(entry.streak) ? entry.streak : 0;
     row.innerHTML = `
       <div class="row-rank">#${rank}</div>
       <div class="row-player">
-        <div class="player-name">${entry.name}</div>
-        <div class="player-subtitle">Score ${entry.score} • ${entry.completedTasks} tasks • ${entry.streak}-day streak</div>
+        <div class="player-name">${safeName}</div>
+        <div class="player-subtitle">Score ${safeScore} • ${safeTasks} tasks • ${safeStreak}-day streak</div>
       </div>
-      <div class="row-score">${entry.score}</div>
+      <div class="row-score">${safeScore}</div>
     `;
     return row;
   }
