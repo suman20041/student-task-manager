@@ -3925,10 +3925,22 @@ function editTask(id) {
 }
 
 function saveAndRender() {
+  let success = true;
   if (window.TaskQuestStorage) {
-    window.TaskQuestStorage.setTasks(tasks);
+    success = window.TaskQuestStorage.setTasks(tasks);
   } else {
-    localStorage.setItem("taskquest_v1.tasks", JSON.stringify(tasks));
+    try {
+      localStorage.setItem("taskquest_v1.tasks", JSON.stringify(tasks));
+    } catch (e) {
+      success = false;
+    }
+  }
+  if (!success) {
+    if (window.showToast) {
+      window.showToast("Storage full. Please clear space in the Vault.", "error");
+    } else {
+      alert("Storage full. Please clear space in the Vault.");
+    }
   }
   renderTasks();
   // Notify other modules (badges, analytics) that tasks changed
