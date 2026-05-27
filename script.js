@@ -1,6 +1,20 @@
 // --- State Management ---
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 
+// --- Security Helpers ---
+// Escapes user-supplied strings before injecting into innerHTML.
+// Without this, a task saved as <img src=x onerror=alert(1)> executes
+// on every render — a persistent stored XSS vector with full access to
+// all localStorage data.
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // --- Selectors ---
 const taskForm = document.getElementById("taskForm");
 const taskInput = document.getElementById("taskInput");
@@ -87,8 +101,8 @@ function renderTasks() {
     li.innerHTML = `
       <input type="checkbox" ${task.completed ? "checked" : ""} onchange="toggleTask(${task.id})">
       <span>
-        ${task.text}
-        <small style="display: block; font-size: 0.75rem; opacity: 0.7;">${task.timestamp}</small>
+        ${escapeHtml(task.text)}
+        <small style="display: block; font-size: 0.75rem; opacity: 0.7;">${escapeHtml(task.timestamp)}</small>
       </span>
       <div style="display: flex; gap: 5px;">
         <button onclick="editTask(${task.id})" style="padding: 0.5rem; font-size: 0.8rem;">Edit</button>
