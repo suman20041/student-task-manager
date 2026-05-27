@@ -546,6 +546,26 @@ function loadData() {
         } else {
           task.tags = parseTags(task.tags.join(", "));
         }
+        // Normalize recurrence fields
+        if (!task.recurrence) task.recurrence = null;
+        if (!task.masterId && task.recurrence) {
+          // create a lightweight masterId if missing for compatibility
+          task.masterId = `rt-${task.id}`;
+          // ensure template exists
+          if (!recurringTemplates.find(t => t.id === task.masterId)) {
+            recurringTemplates.push({ id: task.masterId, text: task.text, category: task.category, priority: task.priority, recurrence: task.recurrence, active: true, startDate: task.createdAt || new Date().toISOString() });
+          }
+        }
+      });
+      // Ensure dependency arrays are normalized
+      tasks.forEach(task => {
+        if (!task.depends) task.depends = [];
+        if (!Array.isArray(task.depends)) {
+          // support comma-separated string legacy
+          task.depends = typeof task.depends === 'string' ? task.depends.split(/[,\s]+/).filter(Boolean).map(id => parseInt(id)) : [];
+        } else {
+          task.depends = task.depends.map(id => parseInt(id)).filter(Boolean);
+        }
       });
     } catch (e) {
       tasks = [];
@@ -1383,6 +1403,18 @@ function addTask() {
     }, 400);
     return;
   }
+  if (text.length > 200) {
+    if (window.showToast) window.showToast("Task description is too long (maximum 200 characters).", "warning");
+    return;
+  }
+    taskInput.classList.add("input-invalid");
+    taskInput.setAttribute("aria-invalid", "true");
+    announce("Failed to add task. Please enter a task description.");
+    setTimeout(() => {
+      taskInput.classList.remove("input-invalid");
+    }, 400);
+    return;
+  }
   taskInput.setAttribute("aria-invalid", "false");
 
 
@@ -1413,6 +1445,29 @@ function addTask() {
     };
     recurringTemplates.push(template);
     task.masterId = template.id;
+  }
+
+  // collect selected prerequisites (multiple)
+  try {
+    const dependsSel = document.getElementById('dependsSelect');
+    if (dependsSel) {
+      const selected = Array.from(dependsSel.selectedOptions).map(o => o.value).filter(v => v !== "" && v !== null && v !== undefined);
+      task.depends = selected.map(v => parseInt(v)).filter(Boolean);
+      // Remove any dependencies that would create a cycle
+      const safeDeps = [];
+      task.depends.forEach(did => {
+        if (hasCircularDependency(task.id, did)) {
+          if (window && window.showToast) window.showToast('Dependency removed to avoid circular reference', 'warning');
+        } else {
+          safeDeps.push(did);
+        }
+      });
+      task.depends = safeDeps;
+    } else {
+      task.depends = [];
+    }
+  } catch (e) {
+    task.depends = [];
   }
 
   tasks.push(task);
@@ -1475,6 +1530,7 @@ function createTaskEl(task) {
           <span class="priority-pill priority-${pri.toLowerCase()}">${pri}</span>
           ${urgencyBadgeHtml}
           ${task.recurrence && task.recurrence !== 'none' ? `<span class="recurrence-pill" data-type="${escapeHtml(task.recurrence)}" title="Recurring: ${escapeHtml(task.recurrence)}">${escapeHtml(task.recurrence)}</span>` : ''}
+          ${task.depends && task.depends.length ? `<span class="dependency-pill" title="Depends on ${task.depends.length} task(s)">🔒 ${task.depends.length}</span>` : ''}
           <span class="task-timestamp" style="font-size: 11px; color: var(--text-light); opacity: 0.8;"><i class="ri-history-line"></i> ${task.createdAt}</span>
         </div>
         ${tags.length ? `<div class="task-tags">${tags.map(tag => `<span class="task-tag" style="--tag-color: ${getTagColor(tag)};"><i class="ri-price-tag-3-line"></i>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
@@ -1496,6 +1552,14 @@ function createTaskEl(task) {
   checkBtn.setAttribute("aria-checked", task.completed ? "true" : "false");
 
   const handleToggle = (e) => {
+    // prevent toggling if task has unmet dependencies
+    if (!task.completed && isTaskBlocked(task)) {
+      const pending = (task.depends || []).map(id => tasks.find(t => t.id === id)).filter(Boolean).filter(t => !t.completed).map(t => t.text);
+      const msg = `Cannot complete task until prerequisites are done: ${pending.join(', ')}`;
+      if (window && window.showToast) window.showToast(msg, 'warning');
+      else alert(msg);
+      return;
+    }
     const oldXp = xp;
     task.completed = !task.completed;
     checkBtn.setAttribute("aria-checked", task.completed ? "true" : "false");
@@ -1522,6 +1586,39 @@ function createTaskEl(task) {
       if (e) triggerCoinExplosion(e);
       showTaskPopup(`QUEST CONQUERED! Gained +${coinReward} Coins & +${xpReward} XP 🏆`);
       try { playSound('complete'); } catch (err) {}
+      // If this task is part of a recurring schedule, generate the next occurrence
+      try {
+        const recurrenceType = task.recurrence || (task.masterId && (recurringTemplates.find(t => t.id === task.masterId) || {}).recurrence);
+        const masterId = task.masterId;
+        if (recurrenceType && recurrenceType !== 'none') {
+          // compute next deadline based on current task deadline or createdAt
+          const base = task.deadline ? new Date(task.deadline) : new Date();
+          const next = computeNextDeadline(recurrenceType, base);
+          if (next) {
+            const nextTask = {
+              id: Date.now() + Math.floor(Math.random() * 1000),
+              text: task.text,
+              category: task.category,
+              priority: task.priority,
+              completed: false,
+              createdAt: getFormattedDateTime(new Date()),
+              deadline: next.toISOString().slice(0,16),
+              penaltyApplied: false,
+              tags: Array.isArray(task.tags) ? task.tags.slice() : (typeof task.tags === 'string' ? parseTags(task.tags) : []),
+              recurrence: recurrenceType,
+              masterId: masterId || null
+            };
+            // ensure template exists
+            if (masterId && !recurringTemplates.find(t => t.id === masterId)) {
+              recurringTemplates.push({ id: masterId, text: task.text, category: task.category, priority: task.priority, recurrence: recurrenceType, active: true, startDate: task.createdAt || new Date().toISOString() });
+            }
+            tasks.push(nextTask);
+            if (window && window.showToast) window.showToast(`Next recurring task scheduled (${recurrenceType})`, 'success');
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to schedule next recurring task', err);
+      }
     } else {
       coins = Math.max(0, coins - 10);
       streak = Math.max(0, streak - 1);
@@ -1556,6 +1653,12 @@ function createTaskEl(task) {
 
   // Delete task event
   div.querySelector(".delete-btn").addEventListener("click", () => {
+    // Remove references from other tasks' dependencies
+    tasks.forEach(t => {
+      if (Array.isArray(t.depends) && t.depends.includes(task.id)) {
+        t.depends = t.depends.filter(d => d !== task.id);
+      }
+    });
     tasks = tasks.filter(t => t.id !== task.id);
     saveData();
     renderTasks();
@@ -1620,6 +1723,30 @@ function createTaskEl(task) {
   setupTouchDrag(div, task);
 
   return div;
+}
+
+// Compute next deadline Date for recurrence types
+function computeNextDeadline(type, fromDate) {
+  if (!fromDate || !(fromDate instanceof Date)) return null;
+  const d = new Date(fromDate.getTime());
+  if (type === 'daily') {
+    d.setDate(d.getDate() + 1);
+    return d;
+  }
+  if (type === 'weekly') {
+    d.setDate(d.getDate() + 7);
+    return d;
+  }
+  if (type === 'monthly') {
+    const day = d.getDate();
+    d.setMonth(d.getMonth() + 1);
+    // handle month rollover (e.g., Jan 31 -> Feb 28)
+    if (d.getDate() !== day) {
+      d.setDate(0); // go to last day of previous month
+    }
+    return d;
+  }
+  return null;
 }
 
 let touchDraggedEl = null;
@@ -1736,6 +1863,54 @@ function saveTaskOrder() {
 
   saveData();
   renderTasks();
+}
+
+// Render depends select options for the add-task form
+function renderDependsSelect() {
+  // Delegate to legacy helper if present
+  if (typeof populateDependsSelect === 'function') return populateDependsSelect();
+  const sel = document.getElementById('dependsSelect');
+  if (!sel) return;
+  const prev = Array.from(sel.selectedOptions).map(o => o.value);
+  // Clear current options (preserve the placeholder)
+  sel.innerHTML = '<option value="">No prerequisite</option>';
+  tasks.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = `${t.text} (${t.category || 'General'})`;
+    if (prev.includes(String(t.id))) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// Returns true if task has any unmet dependencies
+function isTaskBlocked(task) {
+  if (!task || !Array.isArray(task.depends) || task.depends.length === 0) return false;
+  return task.depends.some(id => {
+    const t = tasks.find(x => x.id === id);
+    return !t || !t.completed;
+  });
+}
+
+// Get full dependency chain for a task id (for cycle detection)
+function getDependencyChain(startId, visited = new Set()) {
+  if (visited.has(startId)) return [];
+  visited.add(startId);
+  const t = tasks.find(x => x.id === startId);
+  if (!t || !Array.isArray(t.depends) || t.depends.length === 0) return [];
+  let chain = [];
+  t.depends.forEach(d => {
+    chain.push(d);
+    chain = chain.concat(getDependencyChain(d, visited));
+  });
+  return chain;
+}
+
+// Detect if adding a dependency would create a circular reference
+function hasCircularDependency(taskId, dependsOnId) {
+  // if dependsOnId already depends (directly or indirectly) on taskId, that's a cycle
+  const chain = getDependencyChain(dependsOnId, new Set());
+  return chain.includes(taskId);
 }
 
 function getDragAfterElement(container, y) {
@@ -1870,6 +2045,8 @@ function renderTasks() {
   renderTagSuggestions();
   renderTagFilters();
   updateStats();
+  // Update dependency selector for task creation
+  try { renderDependsSelect(); } catch (e) {}
   // Refresh suggestion banner if smart sort is active
   if (smartSortEnabled && window.Prioritization) {
     var _banner = document.getElementById('smartSuggestionBanner');
@@ -3854,14 +4031,15 @@ function addTask() {
 
   const deadlineVal = document.getElementById('deadlineInput')?.value || null;
   const deadlineIso = deadlineVal ? new Date(deadlineVal).toISOString() : null;
-  const dependsVal = document.getElementById('dependsSelect')?.value || '';
+  const dependsSel = document.getElementById('dependsSelect');
+  const dependsVals = dependsSel ? Array.from(dependsSel.selectedOptions).map(o => o.value).filter(v => v !== '') : [];
   const newTask = {
     id: Date.now(),
     text: text,
     completed: false,
     timestamp: `(${day}, ${date} at ${time})`,
     deadline: deadlineIso
-    , dependsOn: dependsVal ? Number(dependsVal) : null
+    , depends: dependsVals.map(v => parseInt(v)).filter(Boolean)
   };
 
   tasks.push(newTask);
@@ -3870,6 +4048,15 @@ function addTask() {
 }
 
 function removeTask(id) {
+  // Remove references from other tasks' dependency lists
+  tasks.forEach(t => {
+    if (Array.isArray(t.depends) && t.depends.includes(id)) {
+      t.depends = t.depends.filter(d => d !== id);
+    }
+    if (t.dependsOn && t.dependsOn === id) {
+      delete t.dependsOn;
+    }
+  });
   tasks = tasks.filter(task => task.id !== id);
   saveAndRender();
 }
@@ -3878,10 +4065,15 @@ function toggleTask(id) {
   const task = tasks.find(t => t.id === id);
   if (!task) return;
   // Prevent completing if blocked by an incomplete prerequisite
-  if (!task.completed && task.dependsOn) {
-    const pre = tasks.find(t => t.id === task.dependsOn);
-    if (pre && !pre.completed) {
-      try { window.showToast(`Blocked — complete: ${pre.text}`, 'warning'); } catch(e){}
+  if (!task.completed && (Array.isArray(task.depends) ? task.depends.length > 0 : task.dependsOn)) {
+    const deps = Array.isArray(task.depends) ? task.depends : (task.dependsOn ? [task.dependsOn] : []);
+    const blocked = deps.some(did => {
+      const pre = tasks.find(t => t.id === did);
+      return pre && !pre.completed;
+    });
+    if (blocked) {
+      const pending = deps.map(did => tasks.find(t => t.id === did)).filter(Boolean).filter(t => !t.completed).map(t => t.text);
+      try { window.showToast(`Blocked — complete: ${pending.join(', ')}`, 'warning'); } catch(e){}
       return;
     }
   }
@@ -3896,27 +4088,39 @@ function editTask(id) {
   if (newText !== null && newText.trim() !== "") {
     task.text = newText.trim();
   }
-  // prompt for dependency selection (minimal UI): list tasks with index
+  // prompt for dependency selection (minimal UI): allow selecting multiple by comma-separated indices
   const choices = tasks.filter(t => t.id !== id).map((t, i) => `${i+1}. ${t.text} (id:${t.id}${t.completed? ' ✓':''})`);
-  const sel = prompt(`Select prerequisite by number (empty = none):\n${choices.join('\n')}`);
+  const sel = prompt(`Select prerequisite numbers (comma separated) or empty = none:\n${choices.join('\n')}`);
   if (sel !== null) {
-    const n = Number(sel);
-    if (Number.isFinite(n) && n>=1 && n<=choices.length) {
-      // map back to task id
-      const chosen = tasks.filter(t => t.id !== id)[n-1];
-      task.dependsOn = chosen ? chosen.id : null;
-    } else if (sel.trim() === '') {
-      task.dependsOn = null;
+    if (sel.trim() === '') {
+      task.depends = [];
+    } else {
+      const parts = sel.split(/[,\s]+/).map(s => Number(s)).filter(n => Number.isFinite(n) && n>=1 && n<=choices.length);
+      const chosen = parts.map(n => tasks.filter(t => t.id !== id)[n-1]).filter(Boolean).map(t => t.id);
+      // filter out circular dependencies
+      task.depends = chosen.filter(did => !hasCircularDependency(task.id, did));
     }
   }
   saveAndRender();
 }
 
 function saveAndRender() {
+  let success = true;
   if (window.TaskQuestStorage) {
-    window.TaskQuestStorage.setTasks(tasks);
+    success = window.TaskQuestStorage.setTasks(tasks);
   } else {
-    localStorage.setItem("taskquest_v1.tasks", JSON.stringify(tasks));
+    try {
+      localStorage.setItem("taskquest_v1.tasks", JSON.stringify(tasks));
+    } catch (e) {
+      success = false;
+    }
+  }
+  if (!success) {
+    if (window.showToast) {
+      window.showToast("Storage full. Please clear space in the Vault.", "error");
+    } else {
+      alert("Storage full. Please clear space in the Vault.");
+    }
   }
   renderTasks();
   // Notify other modules (badges, analytics) that tasks changed
@@ -3953,9 +4157,11 @@ function renderTasks() {
     if (task.overdue) li.classList.add('overdue');
 
     const deadlineLabel = task.deadline ? new Date(task.deadline).toLocaleString() : '';
-    const prereq = task.dependsOn ? tasks.find(t=>t.id===task.dependsOn) : null;
-    const depBadge = prereq ? (prereq.completed ? `<span class="dep-badge ready">Ready</span>` : `<span class="dep-badge blocked">Blocked</span>`) : '';
-    const depInfo = prereq ? `<div class="dep-info">Depends on: ${escapeHtml(prereq.text)}</div>` : '';
+    const deps = Array.isArray(task.depends) ? task.depends : (task.dependsOn ? [task.dependsOn] : []);
+    const depTasks = deps.map(did => tasks.find(t => t.id === did)).filter(Boolean);
+    const blocked = depTasks.some(d => !d.completed);
+    const depBadge = deps.length ? (blocked ? `<span class="dep-badge blocked">Blocked</span>` : `<span class="dep-badge ready">Ready</span>`) : '';
+    const depInfo = deps.length ? `<div class="dep-info">Depends on: ${depTasks.map(d => escapeHtml(d.text) + (d.completed ? ' ✓' : '')).join(', ')}</div>` : '';
     li.innerHTML = `
       <input type="checkbox" ${task.completed ? "checked" : ""} onchange="toggleTask(${task.id})">
       <span>
