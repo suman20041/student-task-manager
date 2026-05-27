@@ -1383,6 +1383,18 @@ function addTask() {
     }, 400);
     return;
   }
+  if (text.length > 200) {
+    if (window.showToast) window.showToast("Task description is too long (maximum 200 characters).", "warning");
+    return;
+  }
+    taskInput.classList.add("input-invalid");
+    taskInput.setAttribute("aria-invalid", "true");
+    announce("Failed to add task. Please enter a task description.");
+    setTimeout(() => {
+      taskInput.classList.remove("input-invalid");
+    }, 400);
+    return;
+  }
   taskInput.setAttribute("aria-invalid", "false");
 
 
