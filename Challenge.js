@@ -1,3 +1,4 @@
+"use strict";
 const CHALLENGES = [
   { text: "Your first task is to read one book of your choice this week. Pick any genre — fiction, self-help, or a classic. Crack it open and dive in!", tag: "📚 Reading", pts: 10 },
   { text: "Complete one full study session of at least 45 minutes today with zero distractions. No phone, no social media — pure focus mode.", tag: "📖 Study", pts: 15 },
@@ -53,11 +54,28 @@ function saveState() {
 
 function loadState() {
   try {
+    if (!window.localStorage) return;
+  try {
     const saved = window.TaskQuestStorage
       ? window.TaskQuestStorage.getChallenge()
       : JSON.parse(localStorage.getItem("taskquest_v1.challenge"));
     if (saved && typeof saved === "object") {
       state = Object.assign(state, saved);
+    }
+    // Populate badges on load
+    if (state.earnedBadges && state.earnedBadges.length > 0) {
+      setTimeout(() => {
+        const bar = document.getElementById("ach-badges");
+        if (bar) {
+          bar.innerHTML = "";
+          state.earnedBadges.forEach(label => {
+            const el = document.createElement("span");
+            el.className = "badge-item";
+            el.textContent = label;
+            bar.appendChild(el);
+          });
+        }
+      }, 50);
     }
   } catch (e) { /* corrupt data — use defaults */ }
 }
@@ -220,3 +238,7 @@ updatePoints();
 checkBadges();
 renderActiveChallenges();
 renderCompletedChallenges();
+const checkChallengeStatus = (challengeId) => {
+  console.log(`Checking status for challenge: ${challengeId}`);
+  return true;
+};
