@@ -1,5 +1,18 @@
 // --- State Management ---
-let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+// Guard against corrupt or malformed JSON in storage. A bare JSON.parse at
+// the top level throws a SyntaxError before any function is defined, leaving
+// `tasks` undefined and making the entire app non-functional until the user
+// manually clears localStorage. The try/catch recovers silently with an
+// empty array so the app always boots into a usable state.
+let tasks = [];
+try {
+  const _raw = window.TaskQuestStorage
+    ? window.TaskQuestStorage.getTasks()
+    : JSON.parse(localStorage.getItem("taskquest_v1.tasks") || localStorage.getItem("tasks"));
+  if (Array.isArray(_raw)) tasks = _raw;
+} catch (e) {
+  console.warn("[TaskQuest] Corrupt task data in storage — resetting to empty list.", e);
+}
 
 // --- Selectors ---
 const taskForm = document.getElementById("taskForm");
@@ -73,7 +86,15 @@ function editTask(id) {
 }
 
 function saveAndRender() {
-  localStorage.setItem("tasks", JSON.stringify(tasks));
+  try {
+    if (window.TaskQuestStorage) {
+      window.TaskQuestStorage.setTasks(tasks);
+    } else {
+      localStorage.setItem("taskquest_v1.tasks", JSON.stringify(tasks));
+    }
+  } catch (e) {
+    console.warn("[TaskQuest] Failed to persist tasks.", e);
+  }
   renderTasks();
 }
 
@@ -124,7 +145,14 @@ function updateStats() {
 // --- Theme Management ---
 
 function initTheme() {
-  const savedTheme = localStorage.getItem("theme") || "light";
+  let savedTheme = "cosmic";
+  try {
+    savedTheme = (window.TaskQuestStorage
+      ? window.TaskQuestStorage.getTheme()
+      : localStorage.getItem("taskquest_v1.theme") || localStorage.getItem("quests_theme")) || "cosmic";
+  } catch (e) {
+    console.warn("[TaskQuest] Could not read theme from storage.", e);
+  }
   document.documentElement.setAttribute("data-theme", savedTheme);
 
   if (themeSwitcher) {
@@ -132,7 +160,15 @@ function initTheme() {
     themeSwitcher.addEventListener("change", (e) => {
       const selectedTheme = e.target.value;
       document.documentElement.setAttribute("data-theme", selectedTheme);
-      localStorage.setItem("theme", selectedTheme);
+      try {
+        if (window.TaskQuestStorage) {
+          window.TaskQuestStorage.setTheme(selectedTheme);
+        } else {
+          localStorage.setItem("taskquest_v1.theme", selectedTheme);
+        }
+      } catch (err) {
+        console.warn("[TaskQuest] Failed to persist theme.", err);
+      }
     });
   }
 }
