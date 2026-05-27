@@ -962,3 +962,11 @@ document.addEventListener('DOMContentLoaded', () => {
     startSessionHeartbeat();
   }
 });
+const syncStatus = {
+  isConnected: false,
+  lastSyncTimestamp: Date.now(),
+  updateStatus(status) {
+    this.isConnected = status;
+    this.lastSyncTimestamp = Date.now();
+  }
+};
