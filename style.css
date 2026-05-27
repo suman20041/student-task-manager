@@ -7692,3 +7692,8 @@ body.light .drag-handle:hover {
   align-items: center;
   gap: 8px;
 }
+
+:root {
+  --primary-color-new: #007bff;
+  --transition-speed: 0.3s;
+}
