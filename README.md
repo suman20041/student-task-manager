@@ -122,3 +122,6 @@ This project is open-source and available under the [MIT License](./License.md).
 
 ## Community
 Join our community and help us build a better task manager for students.
+
+## Community
+Join our community and help us build a better task manager for students.

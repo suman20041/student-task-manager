@@ -7697,3 +7697,8 @@ body.light .drag-handle:hover {
   --primary-color-new: #007bff;
   --transition-speed: 0.3s;
 }
+
+:root {
+  --primary-color-new: #007bff;
+  --transition-speed: 0.3s;
+}
