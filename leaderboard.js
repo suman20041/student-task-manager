@@ -48,14 +48,32 @@
       if (!Array.isArray(parsed)) {
         return createSampleData();
       }
-      return parsed.map(entry => ({
-        id: entry.id || `${entry.name}-${Math.random().toString(36).slice(2)}`,
-        name: entry.name || "Player",
-        score: Number(entry.score || 0),
-        completedTasks: Number(entry.completedTasks || 0),
-        streak: Number(entry.streak || 0),
-        lastUpdated: entry.lastUpdated || currentTimestamp()
-      }));
+      return parsed.map(entry => {
+        // --- score ---
+        // `entry.score || 0` uses logical-OR which treats 0 as falsy,
+        // making a legitimate zero score indistinguishable from a missing
+        // or corrupt field. Use nullish coalescing so only null/undefined
+        // fall back to 0, while an explicit 0 is preserved as-is.
+        const rawScore = entry.score ?? 0;
+        const score = Number.isFinite(Number(rawScore)) ? Math.max(0, Number(rawScore)) : 0;
+
+        // --- completedTasks ---
+        const rawTasks = entry.completedTasks ?? 0;
+        const completedTasks = Number.isFinite(Number(rawTasks)) ? Math.max(0, Math.floor(Number(rawTasks))) : 0;
+
+        // --- streak ---
+        const rawStreak = entry.streak ?? 0;
+        const streak = Number.isFinite(Number(rawStreak)) ? Math.max(0, Math.floor(Number(rawStreak))) : 0;
+
+        return {
+          id: entry.id || `${entry.name}-${Math.random().toString(36).slice(2)}`,
+          name: entry.name || "Player",
+          score,
+          completedTasks,
+          streak,
+          lastUpdated: entry.lastUpdated || currentTimestamp()
+        };
+      });
     } catch (e) {
       return createSampleData();
     }
