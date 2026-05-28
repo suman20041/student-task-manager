@@ -62,7 +62,6 @@
         }
 
         header {
-            text-align: center;
             margin-bottom: 40px;
         }
 
@@ -225,9 +224,12 @@
 </head>
 <body data-theme="cosmic">
     <div class="container">
-        <header>
-            <h1>Performance Evaluator</h1>
-            <p style="color: var(--text-light);">Analyze your academic progress and focus on what matters most.</p>
+        <header style="display: flex; justify-content: space-between; align-items: center; text-align: left; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h1>Performance Evaluator</h1>
+                <p style="color: var(--text-light);">Analyze your academic progress and focus on what matters most.</p>
+            </div>
+            <a href="index.html" class="btn" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); text-decoration: none; padding: 10px 18px;"><i class="ri-home-4-line"></i> Dashboard</a>
         </header>
 
         <div class="glass-card">
@@ -262,6 +264,43 @@
     </div>
 
     <script>
+        // Load saved subjects or populate a default row
+        function loadSavedSubjects() {
+            const savedPerf = localStorage.getItem('quests_performance');
+            const container = document.getElementById('subjectList');
+            container.innerHTML = '';
+            
+            let loadedData = [];
+            if (savedPerf) {
+                try {
+                    loadedData = JSON.parse(savedPerf);
+                } catch(e) {
+                    loadedData = [];
+                }
+            }
+
+            if (loadedData.length > 0) {
+                loadedData.forEach(sub => {
+                    const div = document.createElement('div');
+                    div.className = 'subject-row';
+                    div.innerHTML = `
+                        <input type="text" class="sub-name" placeholder="Subject Name" value="${sub.name || ''}">
+                        <input type="number" class="sub-marks" placeholder="Obtained" value="${sub.obtained !== undefined ? sub.obtained : ''}">
+                        <input type="number" class="sub-total" placeholder="Total Marks" value="${sub.total !== undefined ? sub.total : ''}">
+                        <button class="btn btn-remove" onclick="this.parentElement.remove()"><i class="ri-delete-bin-line"></i></button>
+                    `;
+                    container.appendChild(div);
+                });
+            } else {
+                addSubjectRow();
+            }
+
+            const profile = JSON.parse(localStorage.getItem('quests_profile') || '{}');
+            if (profile.name) {
+                document.getElementById('username').value = profile.name;
+            }
+        }
+
         function addSubjectRow() {
             const container = document.getElementById('subjectList');
             const div = document.createElement('div');
@@ -277,8 +316,15 @@
 
         function evaluatePerformance() {
             const user = document.getElementById('username').value.trim() || 'Scholar';
+            
+            // Save profile name back to quests_profile if edited
+            const profile = JSON.parse(localStorage.getItem('quests_profile') || '{"name": "Scholar"}');
+            profile.name = user;
+            localStorage.setItem('quests_profile', JSON.stringify(profile));
+
             const rows = document.querySelectorAll('.subject-row');
             const results = [];
+            const saveList = [];
 
             rows.forEach(row => {
                 const name = row.querySelector('.sub-name').value.trim();
@@ -286,11 +332,16 @@
                 const total = parseFloat(row.querySelector('.sub-total').value);
 
                 if (name && !isNaN(marks) && !isNaN(total) && total > 0) {
-                    results.push({ name, percent: (marks / total) * 100 });
+                    const percent = (marks / total) * 100;
+                    results.push({ name, percent });
+                    saveList.push({ name, obtained: marks, total, percentage: percent });
                 }
             });
 
             if (results.length === 0) return alert('Please enter at least one subject with valid marks!');
+
+            // Save performance details to localstorage for report page
+            localStorage.setItem('quests_performance', JSON.stringify(saveList));
 
             results.sort((a, b) => b.percent - a.percent);
             const strong = results[0];
@@ -313,6 +364,9 @@
                         <p><strong>${user}</strong> Your Weak subject is <strong>${weak.name}</strong>, Study hard dude!</p>
                     </div>
                 </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="report.html" class="btn btn-track" style="display: inline-flex; text-decoration: none; padding: 12px 24px; font-size: 14px;"><i class="ri-file-chart-line"></i> View Academic Report</a>
+                </div>
             `;
             resDiv.scrollIntoView({ behavior: 'smooth' });
         }
@@ -320,6 +374,9 @@
         // Theme sync with TaskQuest
         const currentTheme = localStorage.getItem('quests_theme') || 'cosmic';
         document.body.setAttribute('data-theme', currentTheme);
+
+        // Load subjects on page load
+        window.addEventListener('DOMContentLoaded', loadSavedSubjects);
     </script>
 </body>
 </html>

@@ -4284,12 +4284,6 @@ function escapeHtml(str){
 /* Export JSON Logic */
 document.getElementById('exportJsonBtn')?.addEventListener('click', () => { const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(tasks, null, 2)); const dlAnchorElem = document.createElement('a'); dlAnchorElem.setAttribute('href', dataStr); dlAnchorElem.setAttribute('download', 'taskquest_backup.json'); dlAnchorElem.click(); });
 
-// Stub missing functions to prevent errors
-function checkOverduePenalties() {}
-function initDeadlineUpdater() {}
-function renderExams() {}
-function updateDeadlineAlerts() {}
-function renderAssignments() {}
-function renderDailyGoals() {}
-function initStudyHoursChart() {}
-function initCategoryChart() {}
+window.addEventListener('error', (e) => console.error('Global Error:', e.message));
+
+window.addEventListener('error', (e) => console.error('Global Error:', e.message));

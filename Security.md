@@ -48,7 +48,9 @@ If you discover a security issue, please report it responsibly.
 ## ⏱️ Response Timeline
 
 - Acknowledgement: Within 24 hours  
-- Further updates will be shared after review  
+- Initial Triage & Verification: Within 72 hours of report receipt
+- Fix Validation: Periodic status updates provided every 5 days during active development
+- Security Advisory: Released publicly once the patch is pushed to upstream main.
 
 ---
 

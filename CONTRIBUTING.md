@@ -78,6 +78,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
    - Feature works as expected
    - No console errors
    - Responsive on mobile (resize window to < 480px)
+   - LocalStorage keys persist state values correctly (verify via DevTools Application tab)
 
 5. **Commit your changes** with a descriptive message (see below).
 
@@ -193,3 +194,6 @@ Since this project uses plain HTML, CSS, and JavaScript:
 ---
 
 *Thank you for helping make Student Task Manager better for everyone. Happy coding! 🚀*
+## Development Setup
+1. Clone the repository to your local machine.
+2. Open `index.html` in your favorite browser to test changes locally.
