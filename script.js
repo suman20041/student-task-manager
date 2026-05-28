@@ -1774,95 +1774,6 @@ function setupColumnDragOver(body) {
   });
 }
 
-
-
-function renderTasks() {
-  const taskList = document.getElementById("taskList");
-  const boardColumns = document.getElementById("boardColumns");
-  const filtersDiv = document.querySelector(".filters");
-
-  if (currentView === "list") {
-    taskList.style.display = "flex";
-    boardColumns.style.display = "none";
-    if (filtersDiv) filtersDiv.style.display = "flex";
-
-    taskList.innerHTML = "";
-    
-    let filteredTasks = tasks;
-    filteredTasks = filteredTasks.filter(task => taskMatchesFilters(task));
-
-    // Apply sort logic
-    if (currentSort === "priority") {
-      const priorityOrder = { "High": 1, "Medium": 2, "Low": 3 };
-      filteredTasks.sort((a, b) => (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99));
-    } else if (currentSort === "alphabetical") {
-      filteredTasks.sort((a, b) => a.text.localeCompare(b.text));
-    } else if (currentSort === "deadline") {
-      filteredTasks.sort((a, b) => {
-        const aD = a.deadline ? new Date(a.deadline).getTime() : Infinity;
-        const bD = b.deadline ? new Date(b.deadline).getTime() : Infinity;
-        return aD - bD;
-      });
-    }
-
-    if (filteredTasks.length === 0) {
-      taskList.innerHTML = `
-        <div class="empty-state">
-          <i class="ri-ghost-2-line"></i>
-          <h3>No Quests Yet</h3>
-          <p>Add tasks and begin your productivity journey ✨</p>
-        </div>
-      `;
-      renderTagSuggestions();
-      renderTagFilters();
-      updateStats();
-      return;
-    }
-
-    filteredTasks.forEach(task => {
-      taskList.appendChild(createTaskEl(task));
-    });
-
-  } else {
-    taskList.style.display = "none";
-    boardColumns.style.display = "grid";
-    if (filtersDiv) filtersDiv.style.display = "none";
-
-    boardColumns.innerHTML = "";
-
-    const categories = ["Theory", "Practical", "Assignment", "Revision"];
-    
-    categories.forEach(cat => {
-      const colDiv = document.createElement("div");
-      colDiv.className = "board-column";
-      colDiv.setAttribute("data-category", cat);
-
-      const colTasks = tasks.filter(t => t.category === cat);
-      const catEmoji = getCategoryEmoji(cat);
-
-      colDiv.innerHTML = `
-        <div class="board-column-header">
-          <div class="column-title">${catEmoji} ${cat}</div>
-          <div class="column-count">${colTasks.length}</div>
-        </div>
-        <div class="board-column-body" data-category="${cat}"></div>
-      `;
-
-      const bodyDiv = colDiv.querySelector(".board-column-body");
-      colTasks.forEach(task => {
-        bodyDiv.appendChild(createTaskEl(task));
-      });
-
-      setupColumnDragOver(bodyDiv);
-      boardColumns.appendChild(colDiv);
-    });
-  }
-
-  renderTagSuggestions();
-  renderTagFilters();
-  updateStats();
-}
-
 // ==========================
 // Priority Table View
 // ==========================
@@ -3911,11 +3822,23 @@ function renderTasks() {
     const prereq = task.dependsOn ? tasks.find(t=>t.id===task.dependsOn) : null;
     const depBadge = prereq ? (prereq.completed ? `<span class="dep-badge ready">Ready</span>` : `<span class="dep-badge blocked">Blocked</span>`) : '';
     const depInfo = prereq ? `<div class="dep-info">Depends on: ${escapeHtml(prereq.text)}</div>` : '';
+    const allTasks = tasks; // Using the global tasks array
+    const relatedCount = CorrelationEngine.getCorrelationCount(task, allTasks);
+    let correlationBadge = '';
+    if (relatedCount > 0) {
+        correlationBadge = `
+            <span class="correlation-badge" 
+                  style="font-size: 0.7rem; background: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle;" 
+                  title="${relatedCount} related task(s) in this subject">
+                  🔗 ${relatedCount}
+            </span>`;
+    }
     li.innerHTML = `
       <input type="checkbox" ${task.completed ? "checked" : ""} onchange="toggleTask(${task.id})">
       <span>
         ${task.text}
         ${depBadge}
+        ${correlationBadge}
         <small style="display: block; font-size: 0.75rem; opacity: 0.7;">${task.timestamp}</small>
         ${deadlineLabel ? `<div class="task-deadline ${task.overdue ? 'overdue' : ''}">Due: ${deadlineLabel}</div>` : ''}
         ${depInfo}
