@@ -259,13 +259,20 @@ function createChallenge() {
     return;
   }
 
+  // Capture a single timestamp so id, startDate, and endDate are all
+  // derived from the same instant. Three separate Date.now() calls can
+  // return different values if any microtask or GC pause occurs between
+  // them, making endDate - startDate !== days * 86400000 and id !== startDate,
+  // breaking any duration validation and any code that assumes id === startDate.
+  const now = Date.now();
+
   const challenge = {
-    id: Date.now(),
+    id: now,
     title: title,
     type: type,
     duration: days,
-    startDate: Date.now(),
-    endDate: Date.now() + days * 86400000,
+    startDate: now,
+    endDate: now + days * 86400000,
     creator: profile.name || 'Unknown',
     participants: [
       {
