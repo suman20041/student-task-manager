@@ -51,14 +51,14 @@
    */
   function getUrgencyInfo(task) {
     if (task.completed) {
-      return { label: "✅ Done", level: "done", color: "#10b981" };
+      return { label: "✅ Done", level: "done", color: "#059669" };
     }
     var score = calculatePriorityScore(task);
-    if (score >= 60) return { label: "🔴 Overdue",      level: "critical", color: "#ef4444" };
-    if (score >= 50) return { label: "🟠 Due Today",    level: "urgent",   color: "#f97316" };
-    if (score >= 40) return { label: "🟡 Due Tomorrow", level: "high",     color: "#f59e0b" };
-    if (score >= 30) return { label: "🔵 This Week",    level: "medium",   color: "#06b6d4" };
-    return              { label: "🟢 On Track",         level: "low",      color: "#10b981" };
+    if (score >= 60) return { label: "🔴 Overdue",      level: "critical", color: "#dc2626" };
+    if (score >= 50) return { label: "🟠 Due Today",    level: "urgent",   color: "#ea580c" };
+    if (score >= 40) return { label: "🟡 Due Tomorrow", level: "high",     color: "#d97706" };
+    if (score >= 30) return { label: "🔵 This Week",    level: "medium",   color: "#0891b2" };
+    return              { label: "🟢 On Track",         level: "low",      color: "#059669" };
   }
 
   /**
