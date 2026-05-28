@@ -818,11 +818,32 @@ function removeFriend(friendId) {
   renderFriendsList();
 }
 
+  // Capture a single timestamp so id, startDate, and endDate are all
+  // derived from the same instant. Three separate Date.now() calls can
+  // return different values if any microtask or GC pause occurs between
+  // them, making endDate - startDate !== days * 86400000 and id !== startDate,
+  // breaking any duration validation and any code that assumes id === startDate.
+  const now = Date.now();
+
 function createChallenge(title, type, days) {
   const challenge = {
-    id: Date.now(),
+    id: now,
     title: title,
     type: type,
+    duration: days,
+    startDate: now,
+    endDate: now + days * 86400000,
+    creator: profile.name || 'Unknown',
+    participants: [
+      {
+        id: 'me',
+        name: profile.name || 'You',
+        score: 0,
+        tasksCompleted: 0,
+        studyMinutes: 0,
+        streak: streak
+      }
+    ]
     endDate: Date.now() + (days * 86400000),
     participants: [{ id: 'me', name: myProfile.name || 'You', score: 0 }]
   };
