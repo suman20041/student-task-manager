@@ -30,6 +30,21 @@ const BADGES = [
   { pts: 200, label: "🚀 Unstoppable" },
 ];
 
+const elements = {
+  randomBtn: document.getElementById("randomBtn"),
+  challengeTag: document.getElementById("challenge-tag"),
+  challengePts: document.getElementById("challenge-pts"),
+  challengeText: document.getElementById("challenge-text"),
+  challengeCard: document.getElementById("challenge-card"),
+  feedbackMsg: document.getElementById("feedback-msg"),
+  userInput: document.getElementById("user-input"),
+  totalPts: document.getElementById("total-pts"),
+  badgeCount: document.getElementById("badge-count"),
+  achBadges: document.getElementById("ach-badges"),
+  activeList: document.getElementById("active-list"),
+  completedList: document.getElementById("completed-list"),
+};
+
 let state = {
   totalPts: 0,
   badgeCount: 0,
@@ -40,69 +55,145 @@ let state = {
   usedIndices: [],
 };
 
-function generateChallenge() {
-  const btn = document.getElementById("randomBtn");
-  btn.classList.add("spinning");
-  setTimeout(() => btn.classList.remove("spinning"), 500);
+function showFeedback(type, message) {
+  elements.feedbackMsg.className = `feedback-msg ${type}`;
+  elements.feedbackMsg.textContent = message;
+  elements.feedbackMsg.classList.remove("hidden");
+}
 
-  let available = CHALLENGES.map((_, i) => i).filter(i => !state.usedIndices.includes(i));
+function generateChallenge() {
+
+  if (!elements.randomBtn) return;
+
+  elements.randomBtn.classList.add("spinning");
+
+  setTimeout(() => {
+    elements.randomBtn.classList.remove("spinning");
+  }, 500);
+
+  let available = CHALLENGES
+    .map((_, i) => i)
+    .filter(i => !state.usedIndices.includes(i));
+
   if (available.length === 0) {
     state.usedIndices = [];
     available = CHALLENGES.map((_, i) => i);
   }
 
-  const idx = available[Math.floor(Math.random() * available.length)];
+  const idx =
+    available[Math.floor(Math.random() * available.length)];
+
   state.usedIndices.push(idx);
+
   const challenge = CHALLENGES[idx];
-  state.currentChallenge = { ...challenge, id: Date.now() };
 
-  document.getElementById("challenge-tag").textContent = challenge.tag;
-  document.getElementById("challenge-pts").textContent = `+${challenge.pts} pts`;
-  document.getElementById("challenge-text").textContent = challenge.text;
-  document.getElementById("user-input").value = "";
+  state.currentChallenge = {
+    ...challenge,
+    id: Date.now(),
+  };
 
-  const feedbackEl = document.getElementById("feedback-msg");
-  feedbackEl.className = "feedback-msg hidden";
-  feedbackEl.textContent = "";
+  elements.challengeTag.textContent =
+    challenge.tag;
 
-  const card = document.getElementById("challenge-card");
-  card.classList.remove("hidden");
+  elements.challengePts.textContent =
+    `+${challenge.pts} pts`;
+
+  elements.challengeText.textContent =
+    challenge.text;
+
+  elements.userInput.value = "";
+
+  elements.feedbackMsg.className =
+    "feedback-msg hidden";
+
+  elements.feedbackMsg.textContent = "";
+
+  elements.challengeCard.classList.remove(
+    "hidden"
+  );
 
   addToActive(state.currentChallenge);
+
 }
 
 function addToActive(challenge) {
-  const existing = state.activeChallenges.find(c => c.id === challenge.id);
-  if (existing) return;
+
+  const exists =
+    state.activeChallenges.some(
+      c => c.id === challenge.id
+    );
+
+  if (exists) return;
+
   state.activeChallenges.push(challenge);
+
   renderActiveChallenges();
+
 }
 
 function handleResponse() {
-  const input = document.getElementById("user-input").value.trim().toLowerCase();
-  const feedbackEl = document.getElementById("feedback-msg");
 
   if (!state.currentChallenge) return;
 
+  const input =
+    elements.userInput.value
+      .trim()
+      .toLowerCase();
+
   if (!input) {
-    feedbackEl.className = "feedback-msg warning";
-    feedbackEl.textContent = "Please type 'Yes, Done' or 'No' to respond!";
-    feedbackEl.classList.remove("hidden");
+
+    showFeedback(
+      "warning",
+      "Please type 'Yes, Done' or 'No' to respond!"
+    );
+
     return;
+
   }
 
-  const isYes = input.includes("yes") || input === "done" || input === "yes, done" || input === "yes done";
-  const isNo = input === "no" || input.startsWith("no");
+  const positiveResponses = [
+    "yes",
+    "done",
+    "yes done",
+    "yes, done",
+  ];
+
+  const negativeResponses = [
+    "no",
+  ];
+
+  const isYes =
+    positiveResponses.some(response =>
+      input.includes(response)
+    );
+
+  const isNo =
+    negativeResponses.some(response =>
+      input.startsWith(response)
+    );
 
   if (isYes) {
-    const pts = state.currentChallenge.pts;
-    state.totalPts += pts;
-    feedbackEl.className = "feedback-msg success";
-    feedbackEl.textContent = `🎉 I knew it champ, you will do that! You earned +${pts} pts!`;
-    feedbackEl.classList.remove("hidden");
 
-    state.activeChallenges = state.activeChallenges.filter(c => c.id !== state.currentChallenge.id);
-    state.completedChallenges.push({ ...state.currentChallenge, completedAt: new Date() });
+    const pts =
+      state.currentChallenge.pts;
+
+    state.totalPts += pts;
+
+    showFeedback(
+      "success",
+      `🎉 I knew it champ, you will do that! You earned +${pts} pts!`
+    );
+
+    state.activeChallenges =
+      state.activeChallenges.filter(
+        c => c.id !== state.currentChallenge.id
+      );
+
+    state.completedChallenges.push({
+      ...state.currentChallenge,
+      completedAt: new Date(),
+    });
+
     state.currentChallenge = null;
 
     updatePoints();
@@ -111,81 +202,193 @@ function handleResponse() {
     renderCompletedChallenges();
 
     setTimeout(() => {
-      document.getElementById("challenge-card").classList.add("hidden");
+
+      elements.challengeCard.classList.add(
+        "hidden"
+      );
+
     }, 3500);
 
   } else if (isNo) {
-    feedbackEl.className = "feedback-msg warning";
-    feedbackEl.textContent = "⚠️ Complete Task ASAP! Don't let this one slip — you're better than this!";
-    feedbackEl.classList.remove("hidden");
+
+    showFeedback(
+      "warning",
+      "⚠️ Complete Task ASAP! Don't let this one slip — you're better than this!"
+    );
 
   } else {
-    feedbackEl.className = "feedback-msg warning";
-    feedbackEl.textContent = "Type 'Yes, Done' if completed or 'No' if you haven't yet.";
-    feedbackEl.classList.remove("hidden");
+
+    showFeedback(
+      "warning",
+      "Type 'Yes, Done' if completed or 'No' if you haven't yet."
+    );
+
   }
+
 }
 
 function updatePoints() {
-  document.getElementById("total-pts").textContent = state.totalPts;
+
+  elements.totalPts.textContent =
+    state.totalPts;
+
 }
 
 function checkBadges() {
+
   BADGES.forEach(badge => {
-    if (state.totalPts >= badge.pts && !state.earnedBadges.includes(badge.label)) {
-      state.earnedBadges.push(badge.label);
+
+    const alreadyEarned =
+      state.earnedBadges.includes(
+        badge.label
+      );
+
+    if (
+      state.totalPts >= badge.pts &&
+      !alreadyEarned
+    ) {
+
+      state.earnedBadges.push(
+        badge.label
+      );
+
       state.badgeCount++;
-      document.getElementById("badge-count").textContent = state.badgeCount;
+
+      elements.badgeCount.textContent =
+        state.badgeCount;
+
       addBadgeToBar(badge.label);
+
     }
+
   });
+
 }
 
 function addBadgeToBar(label) {
-  const bar = document.getElementById("ach-badges");
-  const empty = bar.querySelector(".ach-empty");
+
+  const empty =
+    elements.achBadges.querySelector(
+      ".ach-empty"
+    );
+
   if (empty) empty.remove();
 
-  const el = document.createElement("span");
-  el.className = "badge-item";
-  el.textContent = label;
-  bar.appendChild(el);
+  const badge =
+    document.createElement("span");
+
+  badge.className = "badge-item";
+
+  badge.textContent = label;
+
+  elements.achBadges.appendChild(
+    badge
+  );
+
 }
 
 function renderActiveChallenges() {
-  const container = document.getElementById("active-list");
-  if (state.activeChallenges.length === 0) {
-    container.innerHTML = `<div class="empty-state"><i class="ti ti-player-play"></i><p>No active challenges yet.<br>Generate one above to get started!</p></div>`;
-    return;
-  }
-  container.innerHTML = state.activeChallenges.map(c => `
-    <div class="list-item">
-      <div class="list-item-left">
-        <div class="list-item-tag">${c.tag}</div>
-        <div class="list-item-text">${c.text}</div>
+
+  if (
+    state.activeChallenges.length === 0
+  ) {
+
+    elements.activeList.innerHTML = `
+      <div class="empty-state">
+        <i class="ti ti-player-play"></i>
+        <p>
+          No active challenges yet.<br>
+          Generate one above to get started!
+        </p>
       </div>
-      <span class="list-item-pts pending">+${c.pts} pts</span>
-    </div>
-  `).join("");
+    `;
+
+    return;
+
+  }
+
+  elements.activeList.innerHTML =
+    state.activeChallenges
+      .map(c => `
+        <div class="list-item">
+          <div class="list-item-left">
+            <div class="list-item-tag">
+              ${c.tag}
+            </div>
+
+            <div class="list-item-text">
+              ${c.text}
+            </div>
+          </div>
+
+          <span class="list-item-pts pending">
+            +${c.pts} pts
+          </span>
+        </div>
+      `)
+      .join("");
+
 }
 
 function renderCompletedChallenges() {
-  const container = document.getElementById("completed-list");
-  if (state.completedChallenges.length === 0) {
-    container.innerHTML = `<div class="empty-state"><i class="ti ti-trophy"></i><p>No completed challenges yet.<br>You've got this, champ!</p></div>`;
-    return;
-  }
-  container.innerHTML = [...state.completedChallenges].reverse().map(c => `
-    <div class="list-item done">
-      <div class="list-item-left">
-        <div class="list-item-tag">${c.tag} · ✅ Completed</div>
-        <div class="list-item-text done-text">${c.text}</div>
+
+  if (
+    state.completedChallenges.length === 0
+  ) {
+
+    elements.completedList.innerHTML = `
+      <div class="empty-state">
+        <i class="ti ti-trophy"></i>
+        <p>
+          No completed challenges yet.<br>
+          You've got this, champ!
+        </p>
       </div>
-      <span class="list-item-pts">+${c.pts} pts</span>
-    </div>
-  `).join("");
+    `;
+
+    return;
+
+  }
+
+  elements.completedList.innerHTML =
+    [...state.completedChallenges]
+      .reverse()
+      .map(c => `
+        <div class="list-item done">
+          <div class="list-item-left">
+
+            <div class="list-item-tag">
+              ${c.tag} · ✅ Completed
+            </div>
+
+            <div class="list-item-text done-text">
+              ${c.text}
+            </div>
+
+          </div>
+
+          <span class="list-item-pts">
+            +${c.pts} pts
+          </span>
+        </div>
+      `)
+      .join("");
+
 }
 
-document.getElementById("user-input").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") handleResponse();
-});
+if (elements.userInput) {
+
+  elements.userInput.addEventListener(
+    "keydown",
+    function (e) {
+
+      if (e.key === "Enter") {
+
+        handleResponse();
+
+      }
+
+    }
+  );
+
+}
