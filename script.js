@@ -4182,6 +4182,29 @@ function renderTasks() {
     if (task.overdue) li.classList.add('overdue');
 
     const deadlineLabel = task.deadline ? new Date(task.deadline).toLocaleString() : '';
+    const prereq = task.dependsOn ? tasks.find(t=>t.id===task.dependsOn) : null;
+    const depBadge = prereq ? (prereq.completed ? `<span class="dep-badge ready">Ready</span>` : `<span class="dep-badge blocked">Blocked</span>`) : '';
+    const depInfo = prereq ? `<div class="dep-info">Depends on: ${escapeHtml(prereq.text)}</div>` : '';
+    const allTasks = tasks; // Using the global tasks array
+    const relatedCount = CorrelationEngine.getCorrelationCount(task, allTasks);
+    let correlationBadge = '';
+    if (relatedCount > 0) {
+        correlationBadge = `
+            <span class="correlation-badge" 
+                  style="font-size: 0.7rem; background: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle;" 
+                  title="${relatedCount} related task(s) in this subject">
+                  🔗 ${relatedCount}
+            </span>`;
+    }
+    li.innerHTML = `
+      <input type="checkbox" ${task.completed ? "checked" : ""} onchange="toggleTask(${task.id})">
+      <span>
+        ${task.text}
+        ${depBadge}
+        ${correlationBadge}
+        <small style="display: block; font-size: 0.75rem; opacity: 0.7;">${task.timestamp}</small>
+        ${deadlineLabel ? `<div class="task-deadline ${task.overdue ? 'overdue' : ''}">Due: ${deadlineLabel}</div>` : ''}
+        ${depInfo}
     const deps = Array.isArray(task.depends) ? task.depends : (task.dependsOn ? [task.dependsOn] : []);
     const depTasks = deps.map(did => tasks.find(t => t.id === did)).filter(Boolean);
     const blocked = depTasks.some(d => !d.completed);
