@@ -1,20 +1,31 @@
-# Pull Request
+# 🚀 Pull Request
 
-## Related Issue
+## 🔗 Related Issue
 Closes #
 
-## Summary
+## 📝 Summary
 Brief description of the changes made and the problem they solve.
 
-## Changes Made
-- List component changes
-- List style edits
-- List script logic adjustments
+## 🛠️ Changes Made
+- [ ] Component updates
+- [ ] Style edits (CSS)
+- [ ] Script logic adjustments (JS)
+- [ ] Documentation updates
 
-## Testing
-- [ ] Manual test validation passed.
-- [ ] Responsive design verified on mobile devices.
+## 🧪 Testing and QA
+Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce.
+- **Local Testing Environment:** (e.g. Chrome, Firefox, Edge, Node.js v20)
+- **Steps to Reproduce:**
+  1. Open ...
+  2. Perform action ...
+- **Verification Details:**
+  - [ ] Manual test validation passed.
+  - [ ] Responsive design verified on mobile devices.
+  - [ ] Accessibility (a11y) checks verified (contrast ratios, focus visible).
 
-## Checklist
-- [x] Code follows project coding standards.
-- [x] Changes are fully self-contained.
+## ✅ Checklist
+- [ ] Code follows project coding standards.
+- [ ] Changes are fully self-contained.
+- [ ] Branch is synced with the latest upstream main.
+- [ ] No merge conflicts present.
+- [ ] PR title follows conventional commit format (e.g. `feat: ...`, `fix: ...`, `docs: ...`).
