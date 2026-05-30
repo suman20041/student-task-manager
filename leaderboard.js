@@ -1,73 +1,83 @@
 "use strict";
-(function() {
-  // Maximum score any single player entry may hold in the leaderboard store.
-  const MAX_PLAYER_SCORE = 9999;
+(function () {
 
-  // Rate-limit simulateScoreBoost: minimum milliseconds between invocations.
-  const BOOST_COOLDOWN_MS = 3000;
+  /* ── CONSTANTS ── */
+  const MAX_SCORE       = 9999;
+  const BOOST_COOLDOWN  = 3000;
+  const REFRESH_MS      = 900;
+  const STORAGE_KEY     = "taskquest_leaderboard_v1";
+  const PROFILE_KEY     = "quests_profile";
+  const COINS_KEY       = "coins";
+  const TASKS_KEY       = "quests";
+  const STREAK_KEY      = "streak";
+  const XP_KEY          = "xp";
+
+  /* ── STATE ── */
   let _lastBoostAt = 0;
-  // Use unified storage keys when available, fall back to legacy keys
-  const _S = window.TaskQuestStorage;
-  const STORAGE_KEY = _S ? _S.KEYS.LEADERBOARD    : "taskquest_leaderboard_v1";
-  const PROFILE_KEY = _S ? _S.KEYS.PROFILE         : "quests_profile"; // This is correct
-  const COINS_KEY   = _S ? _S.KEYS.COINS            : "coins";
-  const TASKS_KEY   = _S ? _S.KEYS.TASKS            : "quests";
-  const STREAK_KEY  = _S ? _S.KEYS.STREAK           : "streak";
-  const XP_KEY      = _S ? _S.KEYS.XP               : "xp";
-  const REFRESH_INTERVAL = 900;
-  const currentTimestamp = () => new Date().toISOString();
+  let _toastTimer  = null;
+  let _prevScores  = {};   // id → last-rendered score, for flash animation
 
-  const elements = {
-    leaderboardTable: document.getElementById("leaderboardTable"),
-    leaderboardBody: document.getElementById("leaderboardBody"),
-    liveStatus: document.getElementById("liveStatus"),
-    lastUpdatedText: document.getElementById("lastUpdatedText"),
-    myRank: document.getElementById("myRank"),
-    myScore: document.getElementById("myScore"),
-    myCompleted: document.getElementById("myCompleted"),
-    myStreak: document.getElementById("myStreak"),
-    syncStatsBtn: document.getElementById("syncStatsBtn"),
-    addPlayerBtn: document.getElementById("addPlayerBtn"),
-    randomBoostBtn: document.getElementById("randomBoostBtn"),
-    refreshBtn: document.getElementById("refreshBtn"),
-    playerNameInput: document.getElementById("playerNameInput"),
-    playerScoreInput: document.getElementById("playerScoreInput"),
-    playerCompletedInput: document.getElementById("playerCompletedInput"),
-    playerStreakInput: document.getElementById("playerStreakInput")
-  };
+  /* ── AVATAR COLOURS (cycling) ── */
+  const AVATAR_COLORS = [
+    ["#1d3461","#60a5fa"],
+    ["#1a3a2a","#34d399"],
+    ["#3b1f1f","#f87171"],
+    ["#2e2014","#f5c842"],
+    ["#2c1a3d","#a78bfa"],
+    ["#1f2d3d","#38bdf8"],
+    ["#3a1a2d","#f472b6"],
+  ];
 
-  function createSampleData() {
-    const sample = [
-      { id: "me", name: "You", score: 720, completedTasks: 18, streak: 5, lastUpdated: currentTimestamp() },
-      { id: "arya", name: "Arya", score: 840, completedTasks: 22, streak: 8, lastUpdated: currentTimestamp() },
-      { id: "noah", name: "Noah", score: 660, completedTasks: 16, streak: 6, lastUpdated: currentTimestamp() },
-      { id: "mia", name: "Mia", score: 610, completedTasks: 14, streak: 7, lastUpdated: currentTimestamp() },
-      { id: "leo", name: "Leo", score: 530, completedTasks: 11, streak: 4, lastUpdated: currentTimestamp() }
-    ];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sample));
-    return sample;
+  function avatarColor(index) {
+    return AVATAR_COLORS[index % AVATAR_COLORS.length];
   }
 
+  function initials(name) {
+    const parts = String(name).trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return String(name).slice(0, 2).toUpperCase();
+  }
+
+  /* ── DOM ── */
+  const el = {
+    body:          document.getElementById("leaderboardBody"),
+    lastUpdated:   document.getElementById("lastUpdatedText"),
+    myRank:        document.getElementById("myRank"),
+    myScore:       document.getElementById("myScore"),
+    myCompleted:   document.getElementById("myCompleted"),
+    myStreak:      document.getElementById("myStreak"),
+    syncBtn:       document.getElementById("syncStatsBtn"),
+    addBtn:        document.getElementById("addPlayerBtn"),
+    boostBtn:      document.getElementById("randomBoostBtn"),
+    refreshBtn:    document.getElementById("refreshBtn"),
+    nameInput:     document.getElementById("playerNameInput"),
+    scoreInput:    document.getElementById("playerScoreInput"),
+    completedInput:document.getElementById("playerCompletedInput"),
+    streakInput:   document.getElementById("playerStreakInput"),
+    form:          document.getElementById("playerForm"),
+    toast:         document.getElementById("toast"),
+  };
+
+  /* ── TOAST ── */
+  function showToast(msg, type = "success") {
+    clearTimeout(_toastTimer);
+    el.toast.textContent = msg;
+    el.toast.className = "show " + type;
+    _toastTimer = setTimeout(() => { el.toast.className = ""; }, 2800);
+  }
+
+  /* ── STORAGE ── */
+  function now() { return new Date().toISOString(); }
+
   function loadLeaderboard() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return createSampleData();
-    }
     try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return seedData();
       const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) {
-        return createSampleData();
-      }
-      return parsed.map(entry => ({
-        id: entry.id || `${entry.name}-${Math.random().toString(36).slice(2)}`,
-        name: entry.name || "Player",
-        score: Math.min(MAX_PLAYER_SCORE, Math.max(0, Number(entry.score || 0))),
-        completedTasks: Number(entry.completedTasks || 0),
-        streak: Number(entry.streak || 0),
-        lastUpdated: entry.lastUpdated || currentTimestamp()
-      }));
-    } catch (e) {
-      return createSampleData();
+      if (!Array.isArray(parsed) || parsed.length === 0) return seedData();
+      return parsed.map(normalise);
+    } catch (_) {
+      return seedData();
     }
   }
 
@@ -75,236 +85,257 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
   }
 
-  function sortLeaderboard(entries) {
-    return entries.slice().sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
+  function normalise(e) {
+    return {
+      id:             e.id || "p-" + Math.random().toString(36).slice(2),
+      name:           String(e.name || "Player"),
+      score:          clamp(Number(e.score) || 0, 0, MAX_SCORE),
+      completedTasks: Math.max(0, Number(e.completedTasks) || 0),
+      streak:         Math.max(0, Number(e.streak) || 0),
+      lastUpdated:    e.lastUpdated || now(),
+    };
+  }
+
+  function clamp(val, min, max) { return Math.min(max, Math.max(min, val)); }
+
+  function seedData() {
+    const sample = [
+      { id: "me",   name: "You",   score: 720, completedTasks: 18, streak: 5 },
+      { id: "arya", name: "Arya",  score: 840, completedTasks: 22, streak: 8 },
+      { id: "noah", name: "Noah",  score: 660, completedTasks: 16, streak: 6 },
+      { id: "mia",  name: "Mia",   score: 610, completedTasks: 14, streak: 7 },
+      { id: "leo",  name: "Leo",   score: 530, completedTasks: 11, streak: 4 },
+    ].map(e => ({ ...normalise(e), lastUpdated: now() }));
+    saveLeaderboard(sample);
+    return sample;
+  }
+
+  function sortEntries(arr) {
+    return arr.slice().sort((a, b) => {
+      if (b.score !== a.score)          return b.score - a.score;
       if (b.completedTasks !== a.completedTasks) return b.completedTasks - a.completedTasks;
-      if (b.streak !== a.streak) return b.streak - a.streak;
+      if (b.streak !== a.streak)        return b.streak - a.streak;
       return new Date(b.lastUpdated) - new Date(a.lastUpdated);
     });
   }
 
-  function getCurrentPlayerData() {
+  /* ── LIVE PLAYER DATA ── */
+  function getLivePlayerData() {
     try {
-      const profile = JSON.parse(localStorage.getItem(PROFILE_KEY) || "null");
-
-      // Read tasks from the unified key first (post-#358 migration), then
-      const tasksRaw = (_S ? _S.getTasks() : null)
-        || localStorage.getItem("taskquest_v1.tasks")
-        || localStorage.getItem(TASKS_KEY)
-        || "[]";
-      
-      const tasks = typeof tasksRaw === 'string' ? JSON.parse(tasksRaw) : tasksRaw;
-      const completedTasks = Array.isArray(tasks) ? tasks.filter(task => task.completed).length : 0;
-
-      const coins = _S ? _S.getCoins() : (parseInt(localStorage.getItem(COINS_KEY), 10) || 0);
-      const streak = _S ? _S.getStreak() : (parseInt(localStorage.getItem(STREAK_KEY), 10) || 0);
-      const xp = _S ? _S.getXP() : (parseInt(localStorage.getItem(XP_KEY), 10) || 0);
-
-      const name = profile?.name || "You";
+      const profile       = JSON.parse(localStorage.getItem(PROFILE_KEY) || "null");
+      const rawTasks      = localStorage.getItem("taskquest_v1.tasks")
+                          || localStorage.getItem(TASKS_KEY)
+                          || "[]";
+      const tasks         = JSON.parse(rawTasks);
+      const completedTasks = Array.isArray(tasks) ? tasks.filter(t => t.completed).length : 0;
+      const coins  = parseInt(localStorage.getItem(COINS_KEY),  10) || 0;
+      const streak = parseInt(localStorage.getItem(STREAK_KEY), 10) || 0;
+      const xp     = parseInt(localStorage.getItem(XP_KEY),     10) || 0;
       const rawScore = coins + completedTasks * 30 + streak * 20 + Math.floor(xp / 10);
-      // Final guard: if any operand was still NaN for any reason, fall back to 0.
-      const score = Number.isFinite(rawScore) ? rawScore : 0;
-
       return {
-        id: "me",
-        name,
-        score,
+        id:             "me",
+        name:           profile?.name || "You",
+        score:          Number.isFinite(rawScore) ? rawScore : 0,
         completedTasks,
         streak,
-        lastUpdated: currentTimestamp()
+        lastUpdated:    now(),
       };
-    } catch (e) {
-      return { id: "me", name: "You", score: 0, completedTasks: 0, streak: 0, lastUpdated: currentTimestamp() };
+    } catch (_) {
+      return { id: "me", name: "You", score: 0, completedTasks: 0, streak: 0, lastUpdated: now() };
     }
   }
 
-  function escapeHtml(str) {
+  /* ── RENDER ── */
+  function escHtml(str) {
     return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function buildRow(entry, rank, highlight) {
-    const row = document.createElement("tr");
-    let rowClass = `leaderboard-row${highlight ? " highlight-row" : ""}`;
-    if (rank <= 3) rowClass += ` rank-${rank}`;
-    row.className = rowClass;
-    const safeName  = escapeHtml(entry.name);
-    const safeScore = Number.isFinite(entry.score) ? entry.score : 0;
-    const safeTasks  = Number.isFinite(entry.completedTasks) ? entry.completedTasks : 0;
-    const safeStreak = Number.isFinite(entry.streak) ? entry.streak : 0;
-    const crown = rank === 1 ? '<i class="ri-vip-crown-fill" style="margin-left:8px; color:#ffd700"></i>' : '';
-    row.innerHTML = `
-      <td class="row-rank">#${rank}</td>
-      <td class="row-player">
-        <div class="player-name">${safeName}${crown}</div>
-        <div class="player-subtitle">Score ${safeScore} • ${safeTasks} tasks • ${safeStreak}-day streak</div>
-      </td>
-      <td class="row-score">${safeScore}</td>
-      <td class="row-completed">${safeTasks}</td>
-      <td class="row-streak">${safeStreak}</td>
-    `;
-    return row;
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function renderLeaderboard() {
-    const entries = sortLeaderboard(loadLeaderboard());
-    const currentUser = getCurrentPlayerData();
-    const merged = entries.filter(item => item.id !== "me");
-    const existing = entries.find(item => item.id === "me");
-    if (existing) {
-      merged.unshift(existing);
-    } else {
-      merged.unshift(currentUser);
+    const raw     = loadLeaderboard();
+    const live    = getLivePlayerData();
+    const withoutMe = raw.filter(e => e.id !== "me");
+    const meEntry   = raw.find(e => e.id === "me") || live;
+    const merged  = sortEntries([meEntry, ...withoutMe]);
+
+    /* update sidebar */
+    const myIdx = merged.findIndex(e => e.id === "me");
+    const myEntry = merged[myIdx] || meEntry;
+    el.myRank.textContent      = myIdx >= 0 ? "#" + (myIdx + 1) : "—";
+    el.myScore.textContent     = myEntry.score;
+    el.myCompleted.textContent = myEntry.completedTasks;
+    el.myStreak.textContent    = myEntry.streak;
+    el.lastUpdated.textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    /* render rows */
+    el.body.innerHTML = "";
+
+    if (merged.length === 0) {
+      el.body.innerHTML = '<div class="lb-empty">No players yet — add one below.</div>';
+      return;
     }
 
-    const sorted = sortLeaderboard(merged);
-    elements.leaderboardBody.innerHTML = "";
+    merged.forEach((entry, idx) => {
+      const rank    = idx + 1;
+      const isMe    = entry.id === "me";
+      const [bg, fg] = avatarColor(idx);
+      const prevScore = _prevScores[entry.id];
+      const scoreUp   = prevScore !== undefined && entry.score > prevScore;
+      _prevScores[entry.id] = entry.score;
 
-    sorted.forEach((entry, index) => {
-      const isCurrentUser = entry.id === "me" || (entry.name === currentUser.name && entry.score === currentUser.score); // More robust check
-      elements.leaderboardBody.appendChild(buildRow(entry, index + 1, isCurrentUser));
+      const rankClass  = rank <= 3 ? ` r${rank}` : "";
+      const meClass    = isMe ? " is-me" : "";
+      const crowns     = ["👑", "🥈", "🥉"];
+      const crownHtml  = rank <= 3
+        ? `<span class="crown" aria-hidden="true">${crowns[rank - 1]}</span>`
+        : "";
+      const rankColor  = rank === 1 ? " r1" : rank === 2 ? " r2" : rank === 3 ? " r3" : "";
+      const meTag      = isMe ? '<span class="me-tag">you</span>' : "";
+      const scoreClass = scoreUp ? " score-up" : "";
+
+      const row = document.createElement("div");
+      row.className = "lb-row" + rankClass + meClass;
+      row.setAttribute("role", "listitem");
+      row.style.animationDelay = (idx * 0.04) + "s";
+      row.innerHTML = `
+        <div class="cell-rank${rankColor}">
+          <span class="rank-num">${rank}</span>
+          ${crownHtml}
+        </div>
+        <div class="cell-player">
+          <div class="avatar" style="background:${bg}; color:${fg}" aria-hidden="true">
+            ${escHtml(initials(entry.name))}
+          </div>
+          <div>
+            <div class="player-name">${escHtml(entry.name)}${meTag}</div>
+            <div class="player-sub">${entry.completedTasks} tasks · ${entry.streak}d streak</div>
+          </div>
+        </div>
+        <div class="cell-score${scoreClass}">${entry.score}</div>
+        <div class="cell-completed">${entry.completedTasks}</div>
+        <div class="cell-streak">${entry.streak > 0 ? "🔥 " : ""}${entry.streak}</div>
+      `;
+      el.body.appendChild(row);
     });
-
-    const rank = sorted.findIndex(entry => entry.id === "me") + 1;
-    const personal = sorted.find(entry => entry.id === "me") || currentUser;
-
-    elements.myRank.textContent = rank || "—";
-    elements.myScore.textContent = personal.score;
-    elements.myCompleted.textContent = personal.completedTasks;
-    elements.myStreak.textContent = personal.streak;
-
-    updateStatus("Live", "Updated at " + new Date().toLocaleTimeString());
   }
 
-  function updateStatus(label, detail) {
-    elements.liveStatus.textContent = label;
-    elements.lastUpdatedText.textContent = detail;
-  }
-
+  /* ── SYNC ── */
   function syncMyStats() {
     const entries = loadLeaderboard();
-    const liveData = getCurrentPlayerData();
-    const existingIndex = entries.findIndex(entry => entry.id === "me");
+    const live    = getLivePlayerData();
+    const idx     = entries.findIndex(e => e.id === "me");
 
-    if (existingIndex >= 0) {
-      const existing = entries[existingIndex];
-      // Merge live-computed fields onto the existing entry rather than
-      // replacing it wholesale. This preserves any score that was manually
-      // set via addOrUpdatePlayer and prevents syncMyStats from zeroing out
-      // the user's completedTasks count when the tasks key has not yet been
-      // migrated to the unified namespace on the leaderboard page.
-      // Only update a field if the live value is strictly greater than the
-      // stored value, so a sync never reduces a player's standing. (Except name)
-      entries[existingIndex] = {
+    if (idx >= 0) {
+      const existing = entries[idx];
+      entries[idx] = {
         ...existing,
-        name: liveData.name, // Name can always be updated
-        score: Math.max(existing.score, liveData.score),
-        completedTasks: Math.max(existing.completedTasks, liveData.completedTasks),
-        streak: Math.max(existing.streak, liveData.streak),
-        lastUpdated: currentTimestamp()
+        name:           live.name,
+        score:          Math.max(existing.score, live.score),
+        completedTasks: Math.max(existing.completedTasks, live.completedTasks),
+        streak:         Math.max(existing.streak, live.streak),
+        lastUpdated:    now(),
       };
     } else {
-      entries.push(liveData);
+      entries.push(live);
     }
 
     saveLeaderboard(entries);
     renderLeaderboard();
+    showToast("Stats synced!", "success");
   }
 
-  function addOrUpdatePlayer() {
-    if (!elements.playerNameInput) return;
-    const name = elements.playerNameInput.value.trim();
-    const score = Number(elements.playerScoreInput.value) || 0;
-    const completedTasks = Number(elements.playerCompletedInput.value) || 0;
-    const streak = Number(elements.playerStreakInput.value) || 0;
+  /* ── ADD / UPDATE PLAYER ── */
+  function addOrUpdatePlayer(e) {
+    e.preventDefault();
+    const name     = el.nameInput.value.trim();
+    const score    = Math.max(0, Number(el.scoreInput.value) || 0);
+    const completed = Math.max(0, Number(el.completedInput.value) || 0);
+    const streak   = Math.max(0, Number(el.streakInput.value) || 0);
+
+    el.nameInput.classList.remove("invalid");
 
     if (!name) {
-      elements.playerNameInput.classList.add('input-invalid');
-      elements.playerNameInput.focus();
-      alert("Please enter a player name."); // Use alert for now, can integrate with toast later
+      el.nameInput.classList.add("invalid");
+      el.nameInput.focus();
+      showToast("Please enter a player name.", "error");
       return;
     }
 
-    const entries = loadLeaderboard(); // Load current entries
-    const normalizedName = name.toLowerCase().replace(/[^a-z0-9]+/gi, "-");
-    const existing = entries.find(entry => entry.name.toLowerCase() === name.toLowerCase());
+    const entries = loadLeaderboard();
+    const existing = entries.find(e => e.name.toLowerCase() === name.toLowerCase());
 
     if (existing) {
-      existing.score = score;
-      existing.completedTasks = completedTasks;
-      existing.streak = streak;
-      existing.lastUpdated = currentTimestamp();
+      existing.score          = score;
+      existing.completedTasks = completed;
+      existing.streak         = streak;
+      existing.lastUpdated    = now();
+      showToast(`Updated ${name}!`, "success");
     } else {
       entries.push({
-        id: `player-${normalizedName}-${Date.now()}`,
+        id:             "p-" + name.toLowerCase().replace(/\W+/g, "-") + "-" + Date.now(),
         name,
         score,
-        completedTasks,
+        completedTasks: completed,
         streak,
-        lastUpdated: currentTimestamp()
+        lastUpdated:    now(),
       });
+      showToast(`${name} added to the board!`, "success");
     }
 
     saveLeaderboard(entries);
     renderLeaderboard();
-    elements.playerNameInput.value = "";
-    elements.playerScoreInput.value = "";
-    elements.playerCompletedInput.value = "";
-    elements.playerStreakInput.value = "";
-    elements.playerStreakInput.value = ""; // Clear streak input too
+
+    el.nameInput.value      = "";
+    el.scoreInput.value     = "";
+    el.completedInput.value = "";
+    el.streakInput.value    = "";
   }
 
-  function simulateScoreBoost() {
-    // Rate-limit: reject invocations that arrive within the cooldown window.
-    const now = Date.now();
-    if (now - _lastBoostAt < BOOST_COOLDOWN_MS) {
-      return;
-    }
-    _lastBoostAt = now;
+  /* ── SIMULATE BOOST ── */
+  function simulateBoost() {
+    const ts = Date.now();
+    if (ts - _lastBoostAt < BOOST_COOLDOWN) return;
+    _lastBoostAt = ts;
 
     const entries = loadLeaderboard();
     if (!entries.length) return;
 
-    const randomPlayer = entries[Math.floor(Math.random() * entries.length)];
-    const boost = Math.round(Math.random() * 120 + 40);
-
-    // Clamp score to MAX_PLAYER_SCORE so repeated boosts cannot inflate
-    // the persisted value beyond a defined ceiling.
-    randomPlayer.score = Math.min(MAX_PLAYER_SCORE, randomPlayer.score + boost);
-    randomPlayer.completedTasks += Math.random() > 0.5 ? 1 : 0; // Small chance to increment tasks/streak
-    randomPlayer.streak += Math.random() > 0.6 ? 1 : 0;
-    randomPlayer.lastUpdated = currentTimestamp();
+    const target = entries[Math.floor(Math.random() * entries.length)];
+    const boost  = Math.round(Math.random() * 120 + 40);
+    target.score          = Math.min(MAX_SCORE, target.score + boost);
+    target.completedTasks += Math.random() > 0.5 ? 1 : 0;
+    target.streak         += Math.random() > 0.6 ? 1 : 0;
+    target.lastUpdated    = now();
 
     saveLeaderboard(entries);
     renderLeaderboard();
+    showToast(`${target.name} gained +${boost} pts!`, "success");
   }
 
+  /* ── EVENTS ── */
   function attachEvents() {
-    elements.syncStatsBtn.addEventListener("click", syncMyStats);
-    elements.addPlayerBtn.addEventListener("click", addOrUpdatePlayer);
-    elements.randomBoostBtn.addEventListener("click", simulateScoreBoost);
-    elements.refreshBtn.addEventListener("click", renderLeaderboard);
+    el.syncBtn.addEventListener("click", syncMyStats);
+    el.form.addEventListener("submit", addOrUpdatePlayer);
+    el.boostBtn.addEventListener("click", simulateBoost);
+    el.refreshBtn.addEventListener("click", () => { renderLeaderboard(); showToast("Board refreshed.", "success"); });
 
-    window.addEventListener("storage", event => { // Listen for changes in other tabs/windows
-      if (event.key === STORAGE_KEY || event.key === PROFILE_KEY || event.key === COINS_KEY || event.key === TASKS_KEY || event.key === STREAK_KEY || event.key === XP_KEY) {
-        renderLeaderboard();
-      }
+    /* clear invalid state on type */
+    el.nameInput.addEventListener("input", () => el.nameInput.classList.remove("invalid"));
+
+    /* cross-tab sync */
+    window.addEventListener("storage", evt => {
+      const watched = [STORAGE_KEY, PROFILE_KEY, COINS_KEY, TASKS_KEY, STREAK_KEY, XP_KEY];
+      if (watched.includes(evt.key)) renderLeaderboard();
     });
   }
 
+  /* ── BOOT ── */
   function init() {
-    if (!localStorage.getItem(STORAGE_KEY)) {
-      createSampleData();
-    }
-
-    renderLeaderboard(); // Initial render
+    if (!localStorage.getItem(STORAGE_KEY)) seedData();
+    renderLeaderboard();
     attachEvents();
-    setInterval(renderLeaderboard, REFRESH_INTERVAL);
+    setInterval(renderLeaderboard, REFRESH_MS);
   }
 
   init();
