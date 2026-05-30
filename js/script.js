@@ -3752,11 +3752,11 @@ function renderProfile() {
       avatarPlaceholder.style.display = "none";
     } else {
       if (profile.gender === "Female") {
-        avatarImg.src = "female_avatar.svg";
+        avatarImg.src = "assets/female_avatar.svg";
         avatarImg.style.display = "block";
         avatarPlaceholder.style.display = "none";
       } else {
-        avatarImg.src = "male_avatar.svg";
+        avatarImg.src = "assets/male_avatar.svg";
         avatarImg.style.display = "block";
         avatarPlaceholder.style.display = "none";
       }
