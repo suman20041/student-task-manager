@@ -1,28 +1,33 @@
 ---
-name: Bug Report
-about: Create a report to help us improve.
+name: 🐛 Bug Report
+about: Create a detailed bug report to help us identify and fix problems.
 title: "[BUG] "
-labels: bug
+labels: ["bug"]
 assignees: ''
 
 ---
 
-**Describe the bug**
+## 🛑 Problem Description
 A clear and concise description of what the bug is.
 
-**To Reproduce**
+## 👣 Steps to Reproduce
 Steps to reproduce the behavior:
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
 4. See error
 
-**Expected behavior**
+## 🎯 Expected Behavior
 A clear and concise description of what you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+## 📸 Screenshots or Screen Recordings
+If applicable, add screenshots or recordings to help explain your problem.
 
-**Environment info:**
-- OS: [e.g. Windows, macOS]
-- Browser [e.g. chrome, safari]
+## 💻 Environment Information
+- **OS:** [e.g. Windows, macOS, Linux]
+- **Browser:** [e.g. Chrome, Firefox, Safari]
+- **Browser Version:** [e.g. 122.0.0]
+- **Local Storage cleared?** [Yes/No]
+
+## 🛠️ Additional Context
+Add any other context about the problem here (e.g., console log stack traces or network requests).

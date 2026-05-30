@@ -1,20 +1,26 @@
 ---
-name: Feature Request
-about: Suggest an idea for this project.
+name: 💡 Feature Request
+about: Propose a new idea, improvement, or enhancement for the project.
 title: "[FEATURE] "
-labels: enhancement
+labels: ["enhancement"]
 assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+## ❓ Is your feature request related to a problem?
+A clear and concise description of what the problem is. E.g. "I'm always frustrated when..."
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+## ✨ Proposed Solution
+A clear and concise description of what you want to happen. Describe how the new feature should work.
 
-**Describe alternatives you've considered**
+## 🌀 Alternatives Considered
 A clear and concise description of any alternative solutions or features you've considered.
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+## 🎨 Visual Mockups or UI Ideas
+If applicable, include drawings, wireframes, mockups, or screenshots showing how the UI should change.
+
+## 🛡️ Target Audience & Impact
+Who will benefit from this feature, and what is its expected impact on overall study tracking or user retention?
+
+## 📝 Additional Context
+Add any other context about the feature request here.
