@@ -8374,3 +8374,29 @@ body.sidebar-collapsed .sidebar-nav-item span {
     padding: 0 !important;
   }
 }
+
+/* ==========================================================================
+   HIGH CONTRAST ACCESSIBILITY MODE
+   ========================================================================== */
+@media (prefers-contrast: more) {
+  :root {
+    --bg-color: #000000 !important;
+    --text-color: #ffffff !important;
+    --card-bg: #111111 !important;
+    --header-bg: #111111 !important;
+    --border-color: #ffffff !important;
+    --button-bg: #0000ff !important;
+    --button-hover: #000099 !important;
+    --accent-color: #00ffff !important;
+    --text: #ffffff !important;
+    --text-light: #dddddd !important;
+    --text-muted: #cccccc !important;
+  }
+  button, select, input, textarea {
+    border: 2px solid #ffffff !important;
+    outline: 2px solid transparent !important;
+  }
+  button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 2px solid #00ffff !important;
+  }
+}
