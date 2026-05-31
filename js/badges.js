@@ -85,6 +85,57 @@
     });
   }
 
+  function playBadgeUnlockSound() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      osc.type = "sine";
+      const now = audioCtx.currentTime;
+      osc.frequency.setValueAtTime(261.63, now); // C4
+      osc.frequency.setValueAtTime(329.63, now + 0.1); // E4
+      osc.frequency.setValueAtTime(392.00, now + 0.2); // G4
+      osc.frequency.setValueAtTime(523.25, now + 0.3); // C5
+      
+      gainNode.gain.setValueAtTime(0.2, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.8);
+    } catch (e) {
+      console.warn("AudioContext synthesis is blocked or unsupported.", e);
+    }
+  }
+
+  function triggerConfettiCelebration() {
+    const container = document.getElementById("confettiContainer");
+    if (!container) return;
+    for (let i = 0; i < 60; i++) {
+      const p = document.createElement("div");
+      p.style.position = "absolute";
+      p.style.width = "8px";
+      p.style.height = "8px";
+      p.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+      p.style.left = `${Math.random() * 100}%`;
+      p.style.top = `-10px`;
+      p.style.borderRadius = "50%";
+      p.style.transform = `scale(${Math.random() * 1.5 + 0.5})`;
+      p.style.transition = "transform 1.5s ease-out, top 1.5s ease-out, opacity 1.5s ease-out";
+      container.appendChild(p);
+      
+      setTimeout(function () {
+        p.style.top = `${window.innerHeight + 10}px`;
+        p.style.transform = `scale(${Math.random() * 0.5}) rotate(${Math.random() * 360}deg)`;
+        p.style.opacity = "0";
+      }, 50);
+      
+      setTimeout(function () { p.remove(); }, 1600);
+    }
+  }
+
   function evaluateBadges(){
     const tasks = getTasks();
     const unlocked = loadUnlocked();
@@ -114,6 +165,8 @@
       saveUnlocked(unlocked);
       // render and notify
       renderBadges(unlocked);
+      playBadgeUnlockSound();
+      triggerConfettiCelebration();
       changed.forEach(id => {
         const b = BADGES.find(x=>x.id===id);
         try { window.showToast(`Unlocked badge: ${b.title} ${b.icon}`, 'success'); } catch(e){}
