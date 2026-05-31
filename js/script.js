@@ -4043,8 +4043,6 @@ function generateTaskId() {
 
 // --- Selectors ---
 const taskForm = document.getElementById("taskForm");
-const taskInput = document.getElementById("taskInput");
-const taskList = document.getElementById("taskList");
 const taskStats = document.getElementById("taskStats");
 const errorMsg = document.getElementById("errorMsg");
 const celebration = document.getElementById("celebration");
