@@ -197,6 +197,34 @@
 
     // Run migration (call once at app boot)
     migrate: migrate,
+
+    // Backup & Restore
+    exportData: function () {
+      const data = {};
+      Object.keys(KEYS).forEach(function (k) {
+        const keyName = KEYS[k];
+        const val = get(keyName);
+        if (val !== null) {
+          data[keyName] = val;
+        }
+      });
+      return JSON.stringify(data, null, 2);
+    },
+
+    importData: function (jsonString) {
+      try {
+        const data = JSON.parse(jsonString);
+        Object.keys(data).forEach(function (key) {
+          if (key.startsWith(NS)) {
+            localStorage.setItem(key, JSON.stringify(data[key]));
+          }
+        });
+        return true;
+      } catch (e) {
+        console.error("[TaskQuest Storage] Import failed:", e);
+        return false;
+      }
+    },
   };
 
   // ── Expose globally ───────────────────────────────────────────────────────
