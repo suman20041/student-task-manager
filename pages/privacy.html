@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="../css/style.css" />
   <style>
     .legal-content {
       background: var(--card);
@@ -63,7 +63,7 @@
 
   <header class="site-header">
     <div class="header-inner">
-      <a href="index.html" class="view-btn" style="text-decoration: none;"><i class="ri-home-4-line"></i> Dashboard</a>
+      <a href="../index.html" class="view-btn" style="text-decoration: none;"><i class="ri-home-4-line"></i> Dashboard</a>
       <div class="header-brand">
         <h1>🔒 Privacy Policy</h1>
         <p class="header-subtitle">
@@ -187,7 +187,7 @@
         if (confirm("Are you absolutely sure you want to delete all your tasks, coins, XP, and stats? This cannot be undone.")) {
           localStorage.clear();
           alert("All application data has been successfully reset.");
-          window.location.href = "index.html";
+          window.location.href = "../index.html";
         }
       });
     }
