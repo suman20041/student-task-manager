@@ -182,3 +182,8 @@ body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSys
   transform: scale(0.95);
   transition: transform 0.1s ease;
 }
+
+.game-btn:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
