@@ -112,6 +112,14 @@ start index.html       # Windows
 xdg-open index.html    # Linux
 ```
 
+### 4️⃣ Verify Environment Setup
+
+We provide a built-in diagnostic checker to verify file integrity, schema versions, and JavaScript syntax:
+
+```bash
+node verify-env.js
+```
+
 ---
 
 ## 🤝 How to Contribute
