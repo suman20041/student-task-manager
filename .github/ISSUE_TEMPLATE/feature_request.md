@@ -1,26 +1,25 @@
 ---
-name: 💡 Feature Request
-about: Propose a new idea, improvement, or enhancement for the project.
-title: "[FEATURE] "
-labels: ["enhancement"]
+name: Feature Request
+about: Propose a new capability or UI enhancement for TaskQuest.
+title: "[FEATURE]: "
+labels: enhancement
 assignees: ''
 
 ---
 
-## ❓ Is your feature request related to a problem?
-A clear and concise description of what the problem is. E.g. "I'm always frustrated when..."
+# Feature Request
 
-## ✨ Proposed Solution
-A clear and concise description of what you want to happen. Describe how the new feature should work.
+## Core Problem
+Describe the problem or limitation this feature request addresses. Why is this capability needed?
 
-## 🌀 Alternatives Considered
-A clear and concise description of any alternative solutions or features you've considered.
+## Proposed Feature / Solution
+A clear and concise description of what you want to happen. Explain how the proposed feature improves user experience.
 
-## 🎨 Visual Mockups or UI Ideas
-If applicable, include drawings, wireframes, mockups, or screenshots showing how the UI should change.
+## Alternatives Considered
+A description of any alternative solutions or workarounds you've considered.
 
-## 🛡️ Target Audience & Impact
-Who will benefit from this feature, and what is its expected impact on overall study tracking or user retention?
+## UI / Interaction Design Idea
+If applicable, describe how the interface should look and behave (layout, styling, animations).
 
-## 📝 Additional Context
-Add any other context about the feature request here.
+## Additional Context
+Add any other context, screenshots, or mockup diagrams about the feature request here.
