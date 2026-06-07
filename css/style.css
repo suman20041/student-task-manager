@@ -8374,3 +8374,29 @@ body.sidebar-collapsed .sidebar-nav-item span {
     padding: 0 !important;
   }
 }
+
+/* ==========================================================================
+   ACCESSIBILITY & WCAG AA COMPLIANCE POLISH
+   ========================================================================== */
+:focus-visible {
+  outline: 3px solid var(--primary, #8b5cf6) !important;
+  outline-offset: 2px !important;
+}
+
+/* Ensure focus outlines for form elements are highly visible */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--primary, #8b5cf6) !important;
+  outline-offset: 1px !important;
+}
+
+/* Improve contrast ratios for small/muted texts to meet WCAG AA */
+.text-light,
+.daily-goals-date,
+.flashcard-shortcuts,
+.legend-item,
+.perf-marks {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
