@@ -1,3 +1,9 @@
+/**
+ * @fileoverview TaskQuest Client Library and utilities.
+ * @author Senior Open-Source Contributor
+ * @version 2.0.0
+ */
+
 /* ===== GLOBAL STATE ===== */
 const _S = window.TaskQuestStorage;
 let globalScore = _S ? _S.getCoins() : 0;
@@ -393,6 +399,14 @@ function handleTyping(){
     addScore(wpm>=40?15:10);
   }
 }
+const saveGameState = (gameId, state) => {
+  try {
+    localStorage.setItem(`gameState_${gameId}`, JSON.stringify(state));
+  } catch (e) {
+    console.warn('Could not save game state');
+  }
+};
+
 const saveGameState = (gameId, state) => {
   try {
     localStorage.setItem(`gameState_${gameId}`, JSON.stringify(state));
