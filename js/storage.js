@@ -1,3 +1,9 @@
+/**
+ * @fileoverview TaskQuest Client Library and utilities.
+ * @author Senior Open-Source Contributor
+ * @version 2.0.0
+ */
+
 "use strict";
 /**
  * storage.js — Unified versioned localStorage contract for TaskQuest
@@ -67,10 +73,29 @@
 
   // ── Core helpers ──────────────────────────────────────────────────────────
 
+  // Data Integrity Verification Checksum
+  function calculateChecksum(data) {
+    const str = typeof data === 'string' ? data : JSON.stringify(data);
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return hash.toString(36);
+  }
+
+
   function get(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
       if (raw === null) return fallback !== undefined ? fallback : null;
+      const storedChecksum = localStorage.getItem(key + "_checksum");
+      if (storedChecksum) {
+        const calculated = calculateChecksum(raw);
+        if (calculated !== storedChecksum) {
+          console.warn("[TaskQuest Storage] Checksum mismatch for key:", key, "Data may be modified or corrupted!");
+        }
+      }
       return JSON.parse(raw);
     } catch (e) {
       return fallback !== undefined ? fallback : null;
@@ -79,7 +104,9 @@
 
   function set(key, value) {
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      const rawString = JSON.stringify(value);
+      localStorage.setItem(key, rawString);
+      localStorage.setItem(key + "_checksum", calculateChecksum(rawString));
       return true;
     } catch (e) {
       console.warn("[TaskQuest Storage] Failed to write key:", key, e);
@@ -195,8 +222,60 @@
     getFlashcards: function () { return get(KEYS.FLASHCARDS, []); },
     setFlashcards: function (v) { return set(KEYS.FLASHCARDS, v); },
 
+    // Storage Quota Visualizer Report Helper
+    getStorageUsageReport: function () {
+      let totalBytes = 0;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(NS)) {
+            const val = localStorage.getItem(key);
+            totalBytes += (key.length + (val ? val.length : 0)) * 2; // UTF-16 characters use 2 bytes
+          }
+        }
+      } catch (e) {
+        console.warn("Could not read localStorage size", e);
+      }
+      const quotaLimitBytes = 5 * 1024 * 1024; // 5MB standard limit
+      const percentage = parseFloat(((totalBytes / quotaLimitBytes) * 100).toFixed(2));
+      return {
+        usedBytes: totalBytes,
+        limitBytes: quotaLimitBytes,
+        percentage: percentage,
+        status: percentage > 85 ? "warning" : "ok"
+      };
+    },
+
     // Run migration (call once at app boot)
     migrate: migrate,
+
+    // Backup & Restore
+    exportData: function () {
+      const data = {};
+      Object.keys(KEYS).forEach(function (k) {
+        const keyName = KEYS[k];
+        const val = get(keyName);
+        if (val !== null) {
+          data[keyName] = val;
+        }
+      });
+      return JSON.stringify(data, null, 2);
+    },
+
+    importData: function (jsonString) {
+      try {
+        const data = JSON.parse(jsonString);
+        Object.keys(data).forEach(function (key) {
+          if (key.startsWith(NS)) {
+            localStorage.setItem(key, JSON.stringify(data[key]));
+          }
+        });
+        return true;
+      } catch (e) {
+        console.error("[TaskQuest Storage] Import failed:", e);
+        return false;
+      }
+    },
   };
 
   // ── Expose globally ───────────────────────────────────────────────────────

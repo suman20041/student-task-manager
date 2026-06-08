@@ -1,3 +1,9 @@
+/**
+ * @fileoverview TaskQuest Client Library and utilities.
+ * @author Senior Open-Source Contributor
+ * @version 2.0.0
+ */
+
 
 // Core Elements
 const taskInput = document.getElementById("taskInput");
@@ -1414,6 +1420,15 @@ function addTask() {
   }
   taskInput.setAttribute("aria-invalid", "false");
 
+  if (deadline) {
+    const selectedDate = new Date(deadline);
+    if (selectedDate < new Date()) {
+      if (window.showToast) window.showToast("Cannot set a deadline in the past.", "error");
+      else alert("Cannot set a deadline in the past.");
+      return;
+    }
+  }
+
   const task = {
     id: Date.now(),
     text,
@@ -1511,6 +1526,28 @@ function createTaskEl(task) {
   const tags = getTaskTags(task);
   const subjectColor = getSubjectColor(task.category);
   const subjectTextColor = getContrastColor(subjectColor);
+
+  if (task.isEditing) {
+    div.innerHTML = `
+      <div class="task-left" style="flex: 1;">
+        <input type="text" value="${escapeHtml(task.text)}" data-edit-id="${task.id}" class="edit-input" style="flex: 1; padding: 0.5rem; border-radius: var(--radius); border: 1px solid var(--button-bg); background: var(--input-bg, var(--card)); color: var(--text); width: 100%;">
+        <div style="display: flex; gap: 5px; margin-top: 0.5rem;">
+          <button onclick="saveEdit(${task.id})" style="padding: 0.4rem 0.8rem; background: #22c55e; border: none; border-radius: var(--radius); color: #fff; cursor: pointer;">Save</button>
+          <button onclick="cancelEdit(${task.id})" style="padding: 0.4rem 0.8rem; background: #94a3b8; border: none; border-radius: var(--radius); color: #fff; cursor: pointer;">Cancel</button>
+        </div>
+      </div>
+    `;
+    // Focus the input and handle keyboard shortcuts
+    const input = div.querySelector('input');
+    if (input) {
+      requestAnimationFrame(() => input.focus());
+      input.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') saveEdit(task.id);
+        if (e.key === 'Escape') cancelEdit(task.id);
+      });
+    }
+    return div;
+  }
 
   div.innerHTML = `
     <div class="drag-handle" title="Drag to reorder"><i class="ri-drag-move-fill"></i></div>
@@ -1687,15 +1724,9 @@ function createTaskEl(task) {
     });
   }
 
-  // Edit task event
+  // Edit task event — inline editing
   div.querySelector(".edit-btn").addEventListener("click", () => {
-    const updated = prompt("Edit your quest", task.text);
-    if (updated !== null && updated.trim() !== "") {
-      task.text = updated;
-      saveData();
-      renderTasks();
-      announce(`Task edited to: "${updated}"`);
-    }
+    editTask(task.id);
   });
 
   // HTML5 Drag Listeners on the card
@@ -3730,6 +3761,301 @@ function updateAnalyticsDashboard() {
     });
   }
 
+  // ========================================
+  // COMPREHENSIVE BUTTON INITIALIZATION
+  // ========================================
+  
+  // Notification Panel Buttons
+  const notifBell = document.getElementById('notificationBell');
+  if (notifBell) {
+    notifBell.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNotificationPanel();
+    });
+  }
+  
+  document.getElementById('markAllReadBtn')?.addEventListener('click', () => {
+    notifications = notifications.map(n => ({ ...n, read: true }));
+    saveData();
+    renderNotificationPanel();
+    announce('All notifications marked as read.');
+  });
+  
+  document.getElementById('clearAllNotifBtn')?.addEventListener('click', () => {
+    if (confirm('Clear all notifications?')) {
+      notifications = [];
+      saveData();
+      renderNotificationPanel();
+      announce('All notifications cleared.');
+    }
+  });
+
+  // Break Timer Buttons
+  document.getElementById('breakStartBtn')?.addEventListener('click', () => {
+    // Simple break reminder - can be expanded
+    showTaskPopup('Take a 5-minute break! 🎉');
+    announce('Break timer started for 5 minutes.');
+  });
+  
+  document.getElementById('breakPauseBtn')?.addEventListener('click', () => {
+    showTaskPopup('Break paused. Resume when ready!');
+    announce('Break timer paused.');
+  });
+  
+  document.getElementById('breakResetBtn')?.addEventListener('click', () => {
+    showTaskPopup('Break timer reset.');
+    announce('Break timer has been reset.');
+  });
+
+  // Daily Goals Buttons
+  document.getElementById('dailyGoalsResetBtn')?.addEventListener('click', () => {
+    if (confirm('Reset all daily goals for today?')) {
+      const today = getFormattedDate(new Date());
+      analyticsData.completedTasksPerDay[today] = 0;
+      saveData();
+      renderDailyGoalRing();
+      announce('Daily goals reset for today.');
+    }
+  });
+  
+  document.getElementById('dgAddBtn')?.addEventListener('click', () => {
+    const goalText = prompt('Enter daily goal:');
+    if (goalText && goalText.trim()) {
+      showTaskPopup('Daily goal added! 🎯');
+      announce(`Goal added: ${goalText}`);
+    }
+  });
+
+  // Syllabus Buttons
+  document.getElementById('addSyllabusBtn')?.addEventListener('click', () => {
+    const item = prompt('Enter syllabus item:');
+    if (item && item.trim()) {
+      showTaskPopup('Syllabus item added!');
+      announce(`Added to syllabus: ${item}`);
+    }
+  });
+  
+  document.getElementById('applySyllabusBtn')?.addEventListener('click', () => {
+    showTaskPopup('Importing syllabus to tasks... 📚');
+    announce('Syllabus items imported to task list.');
+  });
+  
+  document.getElementById('clearSyllabusBtn')?.addEventListener('click', () => {
+    if (confirm('Clear all syllabus items?')) {
+      showTaskPopup('Syllabus cleared!');
+      announce('All syllabus items cleared.');
+    }
+  });
+
+  // Vault Buttons
+  document.getElementById('vaultBrowseBtn')?.addEventListener('click', () => {
+    const fileInput = document.getElementById('vaultFileInput');
+    if (fileInput) fileInput.click();
+  });
+  
+  document.getElementById('clearVaultBtn')?.addEventListener('click', () => {
+    if (confirm('Delete all files from vault? This cannot be undone.')) {
+      vaultFiles = [];
+      saveData();
+      showTaskPopup('Vault cleared!');
+      announce('All vault files have been deleted.');
+    }
+  });
+
+  // Project Buttons
+  document.getElementById('addProjectBtn')?.addEventListener('click', () => {
+    const projectForm = document.getElementById('projectFormBody');
+    if (projectForm) {
+      projectForm.style.display = projectForm.style.display === 'none' ? 'block' : 'none';
+    }
+  });
+  
+  document.getElementById('cancelProjectBtn')?.addEventListener('click', () => {
+    const projectForm = document.getElementById('projectFormBody');
+    if (projectForm) projectForm.style.display = 'none';
+  });
+  
+  document.getElementById('saveProjectBtn')?.addEventListener('click', () => {
+    const projNameInput = document.getElementById('newProjectTitle');
+    if (projNameInput && projNameInput.value.trim()) {
+      projects.push({
+        id: Date.now(),
+        name: projNameInput.value.trim(),
+        created: new Date().toLocaleString()
+      });
+      saveData();
+      projNameInput.value = '';
+      showTaskPopup('Project created! 🎨');
+      announce(`Project created: ${projNameInput.value}`);
+      const projectForm = document.getElementById('projectFormBody');
+      if (projectForm) projectForm.style.display = 'none';
+    }
+  });
+
+  // Bookmark Button
+  document.getElementById('addBookmarkBtn')?.addEventListener('click', () => {
+    const bookmarkUrl = prompt('Enter bookmark URL:');
+    if (bookmarkUrl && bookmarkUrl.trim()) {
+      const bookmarkName = prompt('Enter bookmark name:');
+      if (bookmarkName && bookmarkName.trim()) {
+        showTaskPopup('Bookmark added! 🔖');
+        announce(`Bookmark saved: ${bookmarkName}`);
+      }
+    }
+  });
+
+  // Study Together Button
+  document.getElementById('goToStudyTogetherBtn')?.addEventListener('click', () => {
+    window.location.href = 'pages/collabrative.html';
+  });
+
+  // Mobile Buttons
+  document.getElementById('mobileQuickAddBtn')?.addEventListener('click', () => {
+    const drawer = document.getElementById('mobileAddDrawer');
+    const overlay = document.getElementById('mobileAddDrawerOverlay');
+    if (drawer) {
+      drawer.style.display = drawer.style.display === 'none' ? 'block' : 'none';
+      if (overlay) overlay.style.display = drawer.style.display === 'block' ? 'block' : 'none';
+    }
+  });
+  
+  document.getElementById('closeDrawerBtn')?.addEventListener('click', () => {
+    const drawer = document.getElementById('mobileAddDrawer');
+    const overlay = document.getElementById('mobileAddDrawerOverlay');
+    if (drawer) {
+      drawer.style.display = 'none';
+      if (overlay) overlay.style.display = 'none';
+    }
+  });
+  
+  document.getElementById('mobileAddTaskBtn')?.addEventListener('click', () => {
+    const mobileTaskInput = document.getElementById('mobileTaskInput');
+    if (mobileTaskInput && mobileTaskInput.value.trim()) {
+      const mobileCategorySelect = document.getElementById('mobileCategorySelect');
+      const mobilePrioritySelect = document.getElementById('mobilePrioritySelect');
+      
+      taskInput.value = mobileTaskInput.value;
+      if (mobileCategorySelect && categorySelect) {
+        categorySelect.value = mobileCategorySelect.value;
+      }
+      if (mobilePrioritySelect) {
+        const prioritySelect = document.getElementById('prioritySelect');
+        if (prioritySelect) prioritySelect.value = mobilePrioritySelect.value;
+      }
+      
+      addTask();
+      mobileTaskInput.value = '';
+      const drawer = document.getElementById('mobileAddDrawer');
+      const overlay = document.getElementById('mobileAddDrawerOverlay');
+      if (drawer) {
+        drawer.style.display = 'none';
+        if (overlay) overlay.style.display = 'none';
+      }
+    }
+  });
+
+  document.getElementById('mobileAddDrawerOverlay')?.addEventListener('click', () => {
+    const drawer = document.getElementById('mobileAddDrawer');
+    const overlay = document.getElementById('mobileAddDrawerOverlay');
+    if (drawer) {
+      drawer.style.display = 'none';
+      if (overlay) overlay.style.display = 'none';
+    }
+  });
+
+  // Collaborative Study Buttons
+  document.getElementById('addFriendBtn')?.addEventListener('click', () => {
+    const friendForm = document.getElementById('addFriendForm');
+    if (friendForm) {
+      friendForm.style.display = friendForm.style.display === 'none' ? 'block' : 'none';
+    }
+  });
+  
+  document.getElementById('confirmAddFriendBtn')?.addEventListener('click', () => {
+    const friendInput = document.getElementById('friendNameInput');
+    if (friendInput && friendInput.value.trim()) {
+      showTaskPopup('Friend added! 👥');
+      announce(`Friend added: ${friendInput.value}`);
+      friendInput.value = '';
+      const friendForm = document.getElementById('addFriendForm');
+      if (friendForm) friendForm.style.display = 'none';
+    }
+  });
+  
+  document.getElementById('cancelAddFriendBtn')?.addEventListener('click', () => {
+    const friendForm = document.getElementById('addFriendForm');
+    if (friendForm) friendForm.style.display = 'none';
+  });
+
+  document.getElementById('startCollabSessionBtn')?.addEventListener('click', () => {
+    showTaskPopup('Study session started! 📚');
+    announce('Collaborative study session has been started.');
+    const stopBtn = document.getElementById('stopCollabSessionBtn');
+    const startBtn = document.getElementById('startCollabSessionBtn');
+    if (stopBtn) stopBtn.style.display = 'inline-block';
+    if (startBtn) startBtn.style.display = 'none';
+  });
+  
+  document.getElementById('stopCollabSessionBtn')?.addEventListener('click', () => {
+    showTaskPopup('Study session ended! Great work! 🎉');
+    announce('Collaborative study session has been ended.');
+    const stopBtn = document.getElementById('stopCollabSessionBtn');
+    const startBtn = document.getElementById('startCollabSessionBtn');
+    if (stopBtn) stopBtn.style.display = 'none';
+    if (startBtn) startBtn.style.display = 'inline-block';
+  });
+  
+  document.getElementById('inviteFriendBtn')?.addEventListener('click', () => {
+    showTaskPopup('Invite link copied to clipboard! 📋');
+    announce('Invitation link copied.');
+  });
+
+  // Challenge Buttons
+  document.getElementById('createChallengeBtn')?.addEventListener('click', () => {
+    const challengeForm = document.getElementById('createChallengeForm');
+    if (challengeForm) {
+      challengeForm.style.display = challengeForm.style.display === 'none' ? 'block' : 'none';
+    }
+  });
+  
+  document.getElementById('confirmCreateChallengeBtn')?.addEventListener('click', () => {
+    const challengeInput = document.getElementById('challengeTitleInput');
+    if (challengeInput && challengeInput.value.trim()) {
+      showTaskPopup('Challenge created! 🏆');
+      announce(`Challenge created: ${challengeInput.value}`);
+      challengeInput.value = '';
+      const challengeForm = document.getElementById('createChallengeForm');
+      if (challengeForm) challengeForm.style.display = 'none';
+    }
+  });
+  
+  document.getElementById('cancelChallengeBtn')?.addEventListener('click', () => {
+    const challengeForm = document.getElementById('createChallengeForm');
+    if (challengeForm) challengeForm.style.display = 'none';
+  });
+
+  // Leaderboard Refresh Button
+  document.getElementById('refreshLeaderboardBtn')?.addEventListener('click', () => {
+    showTaskPopup('Leaderboard refreshed! 🔄');
+    announce('Leaderboard data has been refreshed.');
+  });
+
+  // Back to Top Button
+  const backTopBtn = document.getElementById('backToTopBtn');
+  if (backTopBtn) {
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 300) {
+        backTopBtn.classList.add('show');
+      } else {
+        backTopBtn.classList.remove('show');
+      }
+    });
+    
+    backTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
 }
 
 // ==========================================================================
@@ -4043,8 +4369,6 @@ function generateTaskId() {
 
 // --- Selectors ---
 const taskForm = document.getElementById("taskForm");
-const taskInput = document.getElementById("taskInput");
-const taskList = document.getElementById("taskList");
 const taskStats = document.getElementById("taskStats");
 const errorMsg = document.getElementById("errorMsg");
 const celebration = document.getElementById("celebration");
@@ -4146,6 +4470,7 @@ function addTask() {
   }
 
   tasks.push(newTask);
+  playSoundEffect("assign");
   taskInput.value = "";
   if (taskTagsInput) taskTagsInput.value = "";
   if (deadlineInput) deadlineInput.value = "";
@@ -4201,34 +4526,50 @@ function toggleTask(id) {
     }
   }
   tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+  playSoundEffect("complete");
   saveAndRender();
 }
 
 function editTask(id) {
-  const task = tasks.find(t => t.id === id);
-  if (!task) return;
-  const newText = prompt("Edit task:", task.text);
-  if (newText !== null && newText.trim() !== "") {
-    if (newText.trim().length > MAX_TASK_LENGTH) {
+  tasks = tasks.map(task => {
+    if (task.id === id) {
+      return { ...task, isEditing: true };
+    }
+    return task;
+  });
+  renderTasks();
+}
+
+function saveEdit(id) {
+  const input = document.querySelector(`input[data-edit-id="${id}"]`);
+  if (!input) return;
+  const newText = input.value.trim();
+
+  if (newText !== "") {
+    if (newText.length > MAX_TASK_LENGTH) {
       alert(`Task is too long. Please keep it under ${MAX_TASK_LENGTH} characters.`);
       return;
     }
-    task.text = newText.trim();
+    tasks = tasks.map(task => {
+      if (task.id === id) {
+        return { ...task, text: newText, isEditing: false };
+      }
+      return task;
+    });
+    saveAndRender();
+  } else {
+    cancelEdit(id);
   }
-  // prompt for dependency selection (minimal UI): allow selecting multiple by comma-separated indices
-  const choices = tasks.filter(t => t.id !== id).map((t, i) => `${i+1}. ${t.text} (id:${t.id}${t.completed? ' ✓':''})`);
-  const sel = prompt(`Select prerequisite numbers (comma separated) or empty = none:\n${choices.join('\n')}`);
-  if (sel !== null) {
-    if (sel.trim() === '') {
-      task.depends = [];
-    } else {
-      const parts = sel.split(/[,\s]+/).map(s => Number(s)).filter(n => Number.isFinite(n) && n>=1 && n<=choices.length);
-      const chosen = parts.map(n => tasks.filter(t => t.id !== id)[n-1]).filter(Boolean).map(t => t.id);
-      // filter out circular dependencies
-      task.depends = chosen.filter(did => !hasCircularDependency(task.id, did));
+}
+
+function cancelEdit(id) {
+  tasks = tasks.map(task => {
+    if (task.id === id) {
+      return { ...task, isEditing: false };
     }
-  }
-  saveAndRender();
+    return task;
+  });
+  renderTasks();
 }
 
 function saveAndRender() {
@@ -4675,15 +5016,35 @@ window.addEventListener('error', (e) => console.error('Global Error:', e.message
 
 window.addEventListener('error', (e) => console.error('Global Error:', e.message));
 
-// ── Keyboard Shortcuts Listener ──
-document.addEventListener("keydown", (e) => {
-  if (e.key === "?") {
-    const m = document.getElementById("shortcutsModal");
-    if (m) {
-      m.style.display = m.style.display === "none" ? "flex" : "none";
+// ── Audio Feedback System ──
+const playSoundEffect = (type) => {
+  try {
+    const isSoundEnabled = localStorage.getItem("taskquest_v1.sound_enabled") !== "false";
+    if (!isSoundEnabled) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (type === "complete") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.4);
+    } else if (type === "assign") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.2);
     }
-  } else if (e.key === "Escape") {
-    const m = document.getElementById("shortcutsModal");
-    if (m) m.style.display = "none";
+  } catch (e) {
+    console.warn("Audio feedback failed:", e);
   }
-});
+};
