@@ -4470,6 +4470,7 @@ function addTask() {
   }
 
   tasks.push(newTask);
+  playSoundEffect("assign");
   taskInput.value = "";
   if (taskTagsInput) taskTagsInput.value = "";
   if (deadlineInput) deadlineInput.value = "";
@@ -4525,6 +4526,7 @@ function toggleTask(id) {
     }
   }
   tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+  playSoundEffect("complete");
   saveAndRender();
 }
 
@@ -5013,3 +5015,36 @@ document.getElementById('exportJsonBtn')?.addEventListener('click', () => { cons
 window.addEventListener('error', (e) => console.error('Global Error:', e.message));
 
 window.addEventListener('error', (e) => console.error('Global Error:', e.message));
+
+// ── Audio Feedback System ──
+const playSoundEffect = (type) => {
+  try {
+    const isSoundEnabled = localStorage.getItem("taskquest_v1.sound_enabled") !== "false";
+    if (!isSoundEnabled) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (type === "complete") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.4);
+    } else if (type === "assign") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.2);
+    }
+  } catch (e) {
+    console.warn("Audio feedback failed:", e);
+  }
+};
