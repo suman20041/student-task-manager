@@ -4866,3 +4866,16 @@ const playSoundEffect = (type) => {
     console.warn("Audio feedback failed:", e);
   }
 };
+
+
+// Timetable Conflict / Clash Detection Engine
+function detectTimetableClashes(events) {
+  const sorted = [...events].sort((a,b) => a.start.localeCompare(b.start));
+  const clashes = [];
+  for (let i = 0; i < sorted.length - 1; i++) {
+    if (sorted[i].end > sorted[i+1].start) {
+      clashes.push({ eventA: sorted[i], eventB: sorted[i+1] });
+    }
+  }
+  return clashes;
+}
