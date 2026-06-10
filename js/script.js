@@ -4866,3 +4866,20 @@ const playSoundEffect = (type) => {
     console.warn("Audio feedback failed:", e);
   }
 };
+
+
+// Web Worker creation helper for timer drift prevention
+function createTimerWebWorker() {
+  const blobCode = `
+    let timer = null;
+    self.onmessage = function(e) {
+      if (e.data.action === "start") {
+        timer = setInterval(() => { self.postMessage("tick"); }, 1000);
+      } else if (e.data.action === "stop") {
+        clearInterval(timer);
+      }
+    };
+  `;
+  const blob = new Blob([blobCode], { type: "application/javascript" });
+  return new Worker(URL.createObjectURL(blob));
+}
