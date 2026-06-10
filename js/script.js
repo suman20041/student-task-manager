@@ -4866,3 +4866,16 @@ const playSoundEffect = (type) => {
     console.warn("Audio feedback failed:", e);
   }
 };
+
+
+// Dynamic HSL Theme customizer generator
+function generateCustomThemeCSS(hue, saturation, lightness) {
+  return `
+    [data-theme="custom"] {
+      --bg-color: hsl(${hue}, ${saturation}%, 95%);
+      --text-color: hsl(${hue}, ${saturation}%, 15%);
+      --primary-color: hsl(${hue}, ${saturation}%, ${lightness}%);
+      --accent-color: hsl(${(hue + 180) % 360}, ${saturation}%, ${lightness}%);
+    }
+  `;
+}
