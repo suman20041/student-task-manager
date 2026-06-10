@@ -2468,9 +2468,21 @@ window.deleteTimetableSlot = (id) => {
     showTaskPopup("SCHEDULE UPDATED");
   }
 };
+// Module-level interval handles used by initTimetableNotifier() and
+// initCalendarNotifier() to prevent accumulating duplicate intervals.
+// Without these guards, calling updateAnalyticsDashboard() multiple times
+// (e.g. on each analytics tab visit) creates a new concurrent interval on
+// every call, leading to exponential saveData() and renderTimetable() calls.
+let _timetableNotifierInterval = null;
+let _calendarNotifierInterval = null;
 
 function initTimetableNotifier() {
-  setInterval(() => {
+  // Clear any previously registered interval before starting a new one.
+  // This is the primary guard against the timer-leak bug.
+  if (_timetableNotifierInterval !== null) {
+    clearInterval(_timetableNotifierInterval);
+  }
+  _timetableNotifierInterval = setInterval(() => {
     const now = new Date();
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const currentDay = dayNames[now.getDay()];
@@ -2625,7 +2637,11 @@ function renderCalendar() {
 }
 
 function initCalendarNotifier() {
-  setInterval(() => {
+  // Clear any previously registered interval before starting a new one.
+  if (_calendarNotifierInterval !== null) {
+    clearInterval(_calendarNotifierInterval);
+  }
+  _calendarNotifierInterval = setInterval(() => {
     const now = new Date();
     const dateStr = getFormattedDate(now);
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
