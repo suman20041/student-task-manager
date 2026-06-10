@@ -4866,3 +4866,16 @@ const playSoundEffect = (type) => {
     console.warn("Audio feedback failed:", e);
   }
 };
+
+
+// SVG Gradient ID dynamic namespace isolation utility
+function isolateSVGGradientNamespaces(svgElement, namespaceId) {
+  const gradients = svgElement.querySelectorAll("linearGradient, radialGradient");
+  gradients.forEach(g => {
+    const oldId = g.id;
+    const newId = `${oldId}-${namespaceId}`;
+    g.id = newId;
+    const references = svgElement.querySelectorAll(`[fill="url(#${oldId})"]`);
+    references.forEach(ref => ref.setAttribute("fill", `url(#${newId})`));
+  });
+}
