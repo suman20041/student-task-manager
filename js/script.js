@@ -3502,10 +3502,16 @@ function updateAnalyticsDashboard() {
   });
 
   const searchInput = document.getElementById("searchInput");
+  let searchDebounceTimeout = null;
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
       searchQuery = e.target.value.trim().toLowerCase();
-      renderTasks();
+      if (searchDebounceTimeout) {
+        clearTimeout(searchDebounceTimeout);
+      }
+      searchDebounceTimeout = setTimeout(() => {
+        renderTasks();
+      }, 200);
     });
   }
 
