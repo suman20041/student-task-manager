@@ -13,6 +13,16 @@ const categorySelect = document.getElementById("categorySelect");
 const taskTemplate = document.getElementById("taskTemplate");
 const taskTagsInput = document.getElementById("taskTagsInput");
 
+// Consolidated escapeHtml defined before first use
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Audio state & helpers for subtle feedback
 const audioState = {
   muted: localStorage.getItem('quests_sound_muted') === 'true',
@@ -2479,9 +2489,21 @@ window.deleteTimetableSlot = (id) => {
     showTaskPopup("SCHEDULE UPDATED");
   }
 };
+// Module-level interval handles used by initTimetableNotifier() and
+// initCalendarNotifier() to prevent accumulating duplicate intervals.
+// Without these guards, calling updateAnalyticsDashboard() multiple times
+// (e.g. on each analytics tab visit) creates a new concurrent interval on
+// every call, leading to exponential saveData() and renderTimetable() calls.
+let _timetableNotifierInterval = null;
+let _calendarNotifierInterval = null;
 
 function initTimetableNotifier() {
-  setInterval(() => {
+  // Clear any previously registered interval before starting a new one.
+  // This is the primary guard against the timer-leak bug.
+  if (_timetableNotifierInterval !== null) {
+    clearInterval(_timetableNotifierInterval);
+  }
+  _timetableNotifierInterval = setInterval(() => {
     const now = new Date();
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const currentDay = dayNames[now.getDay()];
@@ -2503,12 +2525,12 @@ function initTimetableNotifier() {
           slot.lastNotified = currentTime;
           dataUpdated = true;
           
-          // Play a gentle alert sound if browser allows
-          try {
-            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-            audio.volume = 0.4;
-            audio.play();
-          } catch(e) {}
+          // Use the built-in Web Audio API sound system.
+          // NOTE: External audio URLs (e.g. assets.mixkit.co) are blocked by
+          // the app's Content Security Policy and produce a CSP violation
+          // error in the browser console on every notification. playSoundEffect()
+          // generates audio locally via Web Audio API — no network request needed.
+          try { playSoundEffect('complete'); } catch (e) {}
         }
       }
       
@@ -2636,7 +2658,11 @@ function renderCalendar() {
 }
 
 function initCalendarNotifier() {
-  setInterval(() => {
+  // Clear any previously registered interval before starting a new one.
+  if (_calendarNotifierInterval !== null) {
+    clearInterval(_calendarNotifierInterval);
+  }
+  _calendarNotifierInterval = setInterval(() => {
     const now = new Date();
     const dateStr = getFormattedDate(now);
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -2649,11 +2675,9 @@ function initCalendarNotifier() {
         ev.lastNotified = timeStr;
         changed = true;
         
-        try {
-          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-          audio.volume = 0.5;
-          audio.play();
-        } catch(e) {}
+        // Use built-in Web Audio API (playSoundEffect) instead of an external
+        // URL that violates the Content Security Policy of this application.
+        try { playSoundEffect('complete'); } catch (e) {}
       }
 
       // Cleanup notification flag
@@ -2813,11 +2837,6 @@ function getCategoryEmoji(cat) {
   }
 }
 
-function escapeHtml(text) {
-  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-  return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-}
-
 // ==========================================================================
 // 4. POMODORO TIMER & STUDY HOUR LOGGER
 // ==========================================================================
@@ -2873,7 +2892,12 @@ function startTimer() {
       if (isStudy) {
         sendNotification("Session Complete!", "Study session complete! Take a well-deserved break ☕");
         addNotification({ type: 'break', title: 'Study session complete', body: 'Time for a break ☕' });
-        alert("Study session complete! Take a break.");
+        // Use showTaskPopup() instead of alert() to avoid blocking the main thread.
+        // alert() pauses the setInterval loop while the dialog is open — when
+        // the user dismisses it, the elapsed-time calculation (Date.now() delta)
+        // reports the entire dialog wait time as timer ticks, instantly expiring
+        // the next phase and corrupting the break-time tracking.
+        showTaskPopup('✅ Study session complete! Time for a well-deserved break ☕');
 
         // Log session in focus history
         if (!analyticsData.focusHistory) analyticsData.focusHistory = [];
@@ -2910,7 +2934,8 @@ function startTimer() {
       } else {
         sendNotification("Break Over!", "Break over! Time to focus back on your tasks ⚔️");
         addNotification({ type: 'break', title: 'Break over', body: 'Break finished — back to study!' });
-        alert("Break over! Back to study.");
+        // Same reason as above — non-blocking notification avoids timer drift.
+        showTaskPopup('⚔️ Break over! Time to focus back on your tasks.');
 
         isStudy = true;
         currentTime = studyTime;
@@ -3493,10 +3518,16 @@ function updateAnalyticsDashboard() {
   });
 
   const searchInput = document.getElementById("searchInput");
+  let searchDebounceTimeout = null;
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
       searchQuery = e.target.value.trim().toLowerCase();
-      renderTasks();
+      if (searchDebounceTimeout) {
+        clearTimeout(searchDebounceTimeout);
+      }
+      searchDebounceTimeout = setTimeout(() => {
+        renderTasks();
+      }, 200);
     });
   }
 
@@ -4406,106 +4437,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// --- Core Functions ---
-
-function addTask() {
-  const text = taskInput.value.trim();
-  const category = categorySelect ? categorySelect.value : "Theory";
-  const prioritySelect = document.getElementById("prioritySelect");
-  const priority = prioritySelect ? prioritySelect.value : "Medium";
-  const tags = typeof parseTags === "function" && taskTagsInput ? parseTags(taskTagsInput.value) : [];
-
-  const deadlineInput = document.getElementById("deadlineInput");
-  const deadline = deadlineInput ? deadlineInput.value : "";
-  const recurrenceSelect = document.getElementById("recurrenceSelect");
-  const recurrence = recurrenceSelect ? (recurrenceSelect.value || "none") : "none";
-
-  if (text === "") {
-    errorMsg.textContent = "Please enter a task.";
-    return;
-  }
-
-  if (text.length > MAX_TASK_LENGTH) {
-    errorMsg.textContent = `Task is too long. Please keep it under ${MAX_TASK_LENGTH} characters (currently ${text.length}).`;
-    return;
-  }
-
-  errorMsg.textContent = "";
-
-  const newTask = {
-    id: generateTaskId(),
-    text: text,
-    category,
-    priority,
-    completed: false,
-    createdAt: typeof getFormattedDateTime === "function" ? getFormattedDateTime(new Date()) : new Date().toLocaleString(),
-    deadline: deadline || null,
-    penaltyApplied: false,
-    tags
-  };
-
-  if (recurrence && recurrence !== "none") {
-    newTask.recurrence = recurrence;
-    const template = {
-      id: `rt-${Date.now()}`,
-      text,
-      category,
-      priority,
-      recurrence,
-      active: true,
-      startDate: deadline || new Date().toISOString()
-    };
-    recurringTemplates.push(template);
-    newTask.masterId = template.id;
-  }
-
-  try {
-    const dependsSel = document.getElementById("dependsSelect");
-    if (dependsSel) {
-      const selected = Array.from(dependsSel.selectedOptions).map(o => o.value).filter(v => v !== "");
-      newTask.depends = selected.map(v => parseInt(v)).filter(Boolean);
-      const safeDeps = [];
-      newTask.depends.forEach(did => {
-        if (typeof hasCircularDependency === "function" && hasCircularDependency(newTask.id, did)) {
-          if (window && window.showToast) window.showToast("Dependency removed to avoid circular reference", "warning");
-        } else {
-          safeDeps.push(did);
-        }
-      });
-      newTask.depends = safeDeps;
-    } else {
-      newTask.depends = [];
-    }
-  } catch (e) {
-    newTask.depends = [];
-  }
-
-  tasks.push(newTask);
-  playSoundEffect("assign");
-  taskInput.value = "";
-  if (taskTagsInput) taskTagsInput.value = "";
-  if (deadlineInput) deadlineInput.value = "";
-
-  if (typeof storeRecentTags === "function") storeRecentTags(tags);
-
-  if (analyticsData && analyticsData.categoryStats) {
-    if (!analyticsData.categoryStats[category]) {
-      analyticsData.categoryStats[category] = { created: 0, completed: 0 };
-    }
-    analyticsData.categoryStats[category].created += 1;
-  }
-
-  if (typeof saveData === "function") saveData();
-  renderTasks();
-
-  if (typeof renderCalendar === "function") renderCalendar();
-  if (typeof updateDeadlineAlerts === "function") updateDeadlineAlerts();
-
-  if (typeof sendNotification === "function") sendNotification("Quest Assigned", `COMPLETE ${text} TASK ASAP`);
-  if (typeof showTaskPopup === "function") showTaskPopup(`COMPLETE ${text.toUpperCase()} TASK ASAP`);
-  if (typeof announce === "function") announce(`Task added: "${text}". Category: ${category}, Priority: ${priority}.`);
-}
-
 function removeTask(id) {
   // Remove references from other tasks' dependency lists
   tasks.forEach(t => {
@@ -4611,115 +4542,6 @@ function updateOverdueFlags(){
     }
     return copy;
   });
-}
-
-function renderTasks() {
-  const taskListEl = document.getElementById("taskList");
-  const boardColumns = document.getElementById("boardColumns");
-  const filtersDiv = document.querySelector(".filters");
-
-  if (!taskListEl) return;
-
-  // Ensure new tasks always have a category for Kanban grouping
-  tasks = tasks.map(task => {
-    if (!task.category) task.category = "Theory";
-    if (!task.priority) task.priority = "Medium";
-    if (!task.tags) task.tags = [];
-    return task;
-  });
-
-  if (currentView === "list" || !boardColumns) {
-    taskListEl.style.display = "flex";
-    if (boardColumns) boardColumns.style.display = "none";
-    if (filtersDiv) filtersDiv.style.display = "flex";
-
-    taskListEl.innerHTML = "";
-
-    let filteredTasks = tasks;
-    if (typeof taskMatchesFilters === "function") {
-      filteredTasks = filteredTasks.filter(task => taskMatchesFilters(task));
-    } else if (typeof activeFilter !== "undefined" && activeFilter === "Overdue") {
-      filteredTasks = filteredTasks.filter(task => task.overdue);
-    }
-
-    if (smartSortEnabled && window.Prioritization) {
-      filteredTasks = window.Prioritization.getSortedTasksByPriority(filteredTasks);
-    }
-
-    if (currentSort === "priority") {
-      const priorityOrder = { High: 1, Medium: 2, Low: 3 };
-      filteredTasks.sort((a, b) => (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99));
-    } else if (currentSort === "alphabetical") {
-      filteredTasks.sort((a, b) => a.text.localeCompare(b.text));
-    } else if (currentSort === "deadline") {
-      filteredTasks.sort((a, b) => {
-        const aD = a.deadline ? new Date(a.deadline).getTime() : Infinity;
-        const bD = b.deadline ? new Date(b.deadline).getTime() : Infinity;
-        return aD - bD;
-      });
-    }
-
-    if (filteredTasks.length === 0) {
-      taskListEl.innerHTML = `
-        <div class="empty-state">
-          <i class="ri-ghost-2-line"></i>
-          <h3>No Quests Yet</h3>
-          <p>Add tasks and begin your productivity journey ✨</p>
-        </div>
-      `;
-    } else {
-      filteredTasks.forEach(task => {
-        if (typeof createTaskEl === "function") {
-          taskListEl.appendChild(createTaskEl(task));
-        } else {
-          const li = document.createElement("li");
-          li.textContent = task.text;
-          taskListEl.appendChild(li);
-        }
-      });
-    }
-  } else {
-    taskListEl.style.display = "none";
-    boardColumns.style.display = "grid";
-    if (filtersDiv) filtersDiv.style.display = "none";
-
-    boardColumns.innerHTML = "";
-    const categories = ["Theory", "Practical", "Assignment", "Revision"];
-
-    categories.forEach(cat => {
-      const colDiv = document.createElement("div");
-      colDiv.className = "board-column";
-      colDiv.setAttribute("data-category", cat);
-
-      const colTasks = tasks.filter(t => (t.category || "Theory") === cat);
-      const catEmoji = typeof getCategoryEmoji === "function" ? getCategoryEmoji(cat) : "📌";
-
-      colDiv.innerHTML = `
-        <div class="board-column-header">
-          <div class="column-title">${catEmoji} ${cat}</div>
-          <div class="column-count">${colTasks.length}</div>
-        </div>
-        <div class="board-column-body" data-category="${cat}"></div>
-      `;
-
-      const bodyDiv = colDiv.querySelector(".board-column-body");
-      colTasks.forEach(task => {
-        if (typeof createTaskEl === "function") {
-          bodyDiv.appendChild(createTaskEl(task));
-        }
-      });
-
-      if (typeof setupColumnDragOver === "function") {
-        setupColumnDragOver(bodyDiv);
-      }
-      boardColumns.appendChild(colDiv);
-    });
-  }
-
-  if (typeof renderTagSuggestions === "function") renderTagSuggestions();
-  if (typeof renderTagFilters === "function") renderTagFilters();
-  if (typeof updateStats === "function") updateStats();
-  try { if (typeof renderDependsSelect === "function") renderDependsSelect(); } catch (e) {}
 }
 
 // ==========================
@@ -5014,10 +4836,6 @@ function populateDependsSelect(){
     sel.appendChild(opt);
   });
   if (prev) sel.value = prev;
-}
-
-function escapeHtml(str){
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* Export JSON Logic */
