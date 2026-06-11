@@ -657,10 +657,3 @@ const logEventSafely = (eventName, eventData) => {
   }
 };
 
-const logEventSafely = (eventName, eventData) => {
-  try {
-    console.log(`[Analytics] ${eventName}:`, eventData);
-  } catch (error) {
-    console.error('Failed to log analytics event');
-  }
-};
