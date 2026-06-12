@@ -20,25 +20,25 @@ console.log(`- Architecture: ${process.arch}\n`);
 
 // 2. Critical Files Check
 const CRITICAL_FILES = [
-  'index.html',
-  'style.css',
-  'script.js',
-  'storage.js',
-  'toast.js',
-  'badges.js',
-  'analytics.js',
-  'sw.js'
+  { name: 'index.html', path: 'index.html' },
+  { name: 'css/style.css', path: 'css/style.css' },
+  { name: 'js/script.js', path: 'js/script.js' },
+  { name: 'js/storage.js', path: 'js/storage.js' },
+  { name: 'js/toast.js', path: 'js/toast.js' },
+  { name: 'js/badges.js', path: 'js/badges.js' },
+  { name: 'js/analytics.js', path: 'js/analytics.js' },
+  { name: 'sw.js', path: 'sw.js' }
 ];
 
 console.log("📂 File Checks:");
 let missingFiles = 0;
 CRITICAL_FILES.forEach(file => {
-  const filePath = path.join(__dirname, file);
+  const filePath = path.join(__dirname, file.path);
   if (fs.existsSync(filePath)) {
     const stats = fs.statSync(filePath);
-    console.log(`  ✅ ${file} - Found (${(stats.size / 1024).toFixed(2)} KB)`);
+    console.log(`  ✅ ${file.name} - Found (${(stats.size / 1024).toFixed(2)} KB)`);
   } else {
-    console.log(`  ❌ ${file} - Missing!`);
+    console.log(`  ❌ ${file.name} - Missing!`);
     missingFiles++;
   }
 });
@@ -46,7 +46,12 @@ console.log("");
 
 // 3. Syntax validation for JS files
 console.log("⚙️ JavaScript Syntax Checks:");
-const jsFiles = fs.readdirSync(__dirname).filter(f => f.endsWith('.js') && f !== 'verify-env.js');
+const jsFiles = [
+  'sw.js',
+  ...fs.readdirSync(path.join(__dirname, 'js'))
+    .filter(f => f.endsWith('.js'))
+    .map(f => path.join('js', f))
+];
 let syntaxErrors = 0;
 
 jsFiles.forEach(file => {
