@@ -4868,14 +4868,17 @@ const playSoundEffect = (type) => {
 };
 
 
-// Timetable Conflict / Clash Detection Engine
-function detectTimetableClashes(events) {
-  const sorted = [...events].sort((a,b) => a.start.localeCompare(b.start));
-  const clashes = [];
-  for (let i = 0; i < sorted.length - 1; i++) {
-    if (sorted[i].end > sorted[i+1].start) {
-      clashes.push({ eventA: sorted[i], eventB: sorted[i+1] });
+// Native Browser Notification Dispatcher
+function dispatchNativeBrowserAlert(title, message) {
+  if ("Notification" in window) {
+    if (Notification.permission === "granted") {
+      new Notification(title, { body: message });
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          new Notification(title, { body: message });
+        }
+      });
     }
   }
-  return clashes;
 }
