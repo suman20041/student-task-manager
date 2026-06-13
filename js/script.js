@@ -2481,9 +2481,21 @@ window.deleteTimetableSlot = (id) => {
     showTaskPopup("SCHEDULE UPDATED");
   }
 };
+// Module-level interval handles used by initTimetableNotifier() and
+// initCalendarNotifier() to prevent accumulating duplicate intervals.
+// Without these guards, calling updateAnalyticsDashboard() multiple times
+// (e.g. on each analytics tab visit) creates a new concurrent interval on
+// every call, leading to exponential saveData() and renderTimetable() calls.
+let _timetableNotifierInterval = null;
+let _calendarNotifierInterval = null;
 
 function initTimetableNotifier() {
-  setInterval(() => {
+  // Clear any previously registered interval before starting a new one.
+  // This is the primary guard against the timer-leak bug.
+  if (_timetableNotifierInterval !== null) {
+    clearInterval(_timetableNotifierInterval);
+  }
+  _timetableNotifierInterval = setInterval(() => {
     const now = new Date();
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const currentDay = dayNames[now.getDay()];
@@ -2505,12 +2517,12 @@ function initTimetableNotifier() {
           slot.lastNotified = currentTime;
           dataUpdated = true;
           
-          // Play a gentle alert sound if browser allows
-          try {
-            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-            audio.volume = 0.4;
-            audio.play();
-          } catch(e) {}
+          // Use the built-in Web Audio API sound system.
+          // NOTE: External audio URLs (e.g. assets.mixkit.co) are blocked by
+          // the app's Content Security Policy and produce a CSP violation
+          // error in the browser console on every notification. playSoundEffect()
+          // generates audio locally via Web Audio API — no network request needed.
+          try { playSoundEffect('complete'); } catch (e) {}
         }
       }
       
@@ -2638,7 +2650,11 @@ function renderCalendar() {
 }
 
 function initCalendarNotifier() {
-  setInterval(() => {
+  // Clear any previously registered interval before starting a new one.
+  if (_calendarNotifierInterval !== null) {
+    clearInterval(_calendarNotifierInterval);
+  }
+  _calendarNotifierInterval = setInterval(() => {
     const now = new Date();
     const dateStr = getFormattedDate(now);
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -2651,11 +2667,9 @@ function initCalendarNotifier() {
         ev.lastNotified = timeStr;
         changed = true;
         
-        try {
-          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-          audio.volume = 0.5;
-          audio.play();
-        } catch(e) {}
+        // Use built-in Web Audio API (playSoundEffect) instead of an external
+        // URL that violates the Content Security Policy of this application.
+        try { playSoundEffect('complete'); } catch (e) {}
       }
 
       // Cleanup notification flag
@@ -2870,7 +2884,12 @@ function startTimer() {
       if (isStudy) {
         sendNotification("Session Complete!", "Study session complete! Take a well-deserved break ☕");
         addNotification({ type: 'break', title: 'Study session complete', body: 'Time for a break ☕' });
-        alert("Study session complete! Take a break.");
+        // Use showTaskPopup() instead of alert() to avoid blocking the main thread.
+        // alert() pauses the setInterval loop while the dialog is open — when
+        // the user dismisses it, the elapsed-time calculation (Date.now() delta)
+        // reports the entire dialog wait time as timer ticks, instantly expiring
+        // the next phase and corrupting the break-time tracking.
+        showTaskPopup('✅ Study session complete! Time for a well-deserved break ☕');
 
         // Log session in focus history
         if (!analyticsData.focusHistory) analyticsData.focusHistory = [];
@@ -2907,7 +2926,8 @@ function startTimer() {
       } else {
         sendNotification("Break Over!", "Break over! Time to focus back on your tasks ⚔️");
         addNotification({ type: 'break', title: 'Break over', body: 'Break finished — back to study!' });
-        alert("Break over! Back to study.");
+        // Same reason as above — non-blocking notification avoids timer drift.
+        showTaskPopup('⚔️ Break over! Time to focus back on your tasks.');
 
         isStudy = true;
         currentTime = studyTime;
@@ -3490,10 +3510,16 @@ function updateAnalyticsDashboard() {
   });
 
   const searchInput = document.getElementById("searchInput");
+  let searchDebounceTimeout = null;
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
       searchQuery = e.target.value.trim().toLowerCase();
-      renderTasks();
+      if (searchDebounceTimeout) {
+        clearTimeout(searchDebounceTimeout);
+      }
+      searchDebounceTimeout = setTimeout(() => {
+        renderTasks();
+      }, 200);
     });
   }
 
@@ -4845,3 +4871,17 @@ const playSoundEffect = (type) => {
 };
 
 
+// Native Browser Notification Dispatcher
+function dispatchNativeBrowserAlert(title, message) {
+  if ("Notification" in window) {
+    if (Notification.permission === "granted") {
+      new Notification(title, { body: message });
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          new Notification(title, { body: message });
+        }
+      });
+    }
+  }
+}
