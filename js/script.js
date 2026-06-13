@@ -4868,23 +4868,17 @@ const playSoundEffect = (type) => {
 };
 
 
-// Task Dependency Graph validation helper
-function validateTaskDependencies(taskList) {
-  const adj = {};
-  taskList.forEach(t => { adj[t.id] = t.dependsOn ? [t.dependsOn] : []; });
-  const visited = {};
-  const recStack = {};
-  function hasCycle(v) {
-    if (!visited[v]) {
-      visited[v] = true;
-      recStack[v] = true;
-      for (let neighbor of (adj[v] || [])) {
-        if (!visited[neighbor] && hasCycle(neighbor)) return true;
-        else if (recStack[neighbor]) return true;
-      }
+// Native Browser Notification Dispatcher
+function dispatchNativeBrowserAlert(title, message) {
+  if ("Notification" in window) {
+    if (Notification.permission === "granted") {
+      new Notification(title, { body: message });
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          new Notification(title, { body: message });
+        }
+      });
     }
-    recStack[v] = false;
-    return false;
   }
-  return Object.keys(adj).some(node => hasCycle(node));
 }
