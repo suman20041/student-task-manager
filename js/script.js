@@ -2033,9 +2033,12 @@ function renderTasks() {
       return;
     }
 
+    const fragment = document.createDocumentFragment();
     filteredTasks.forEach(task => {
-      taskListEl.appendChild(createTaskEl(task));
+      fragment.appendChild(createTaskEl(task));
     });
+    taskListEl.innerHTML = " \;
+ taskListEl.appendChild(fragment);
 
   } else {
     taskListEl.style.display = "none";
