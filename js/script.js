@@ -2037,8 +2037,8 @@ function renderTasks() {
     filteredTasks.forEach(task => {
       fragment.appendChild(createTaskEl(task));
     });
-    taskListEl.innerHTML = " \;
- taskListEl.appendChild(fragment);
+    taskListEl.innerHTML = "";
+    taskListEl.appendChild(fragment);
 
   } else {
     taskListEl.style.display = "none";
