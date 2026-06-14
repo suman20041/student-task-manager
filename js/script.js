@@ -1414,11 +1414,18 @@ document.getElementById("claimMilestoneBtn")?.addEventListener("click", (e) => {
 // ==========================================================================
 
 function addTask() {
-  const text = taskInput.value.trim();
-  const category = categorySelect.value;
-
+  let category = "Theory";
+  if (categorySelect && categorySelect.value && categorySelect.value.trim() !== "") {
+    category = categorySelect.value;
+  }
+  
+  let priority = "Medium";
   const prioritySelect = document.getElementById("prioritySelect");
-  const priority = prioritySelect ? prioritySelect.value : "Medium";
+  if (prioritySelect && prioritySelect.value && prioritySelect.value.trim() !== "") {
+    priority = prioritySelect.value;
+  }
+  
+  const text = taskInput.value.trim();
   const tags = parseTags(taskTagsInput ? taskTagsInput.value : "");
 
   const deadlineInput = document.getElementById("deadlineInput");
@@ -1440,15 +1447,6 @@ function addTask() {
     return;
   }
   taskInput.setAttribute("aria-invalid", "false");
-
-  if (deadline) {
-    const selectedDate = new Date(deadline);
-    if (selectedDate < new Date()) {
-      if (window.showToast) window.showToast("Cannot set a deadline in the past.", "error");
-      else alert("Cannot set a deadline in the past.");
-      return;
-    }
-  }
 
   const task = {
     id: Date.now(),
@@ -1547,28 +1545,6 @@ function createTaskEl(task) {
   const tags = getTaskTags(task);
   const subjectColor = getSubjectColor(task.category);
   const subjectTextColor = getContrastColor(subjectColor);
-
-  if (task.isEditing) {
-    div.innerHTML = `
-      <div class="task-left" style="flex: 1;">
-        <input type="text" value="${escapeHtml(task.text)}" data-edit-id="${task.id}" class="edit-input" style="flex: 1; padding: 0.5rem; border-radius: var(--radius); border: 1px solid var(--button-bg); background: var(--input-bg, var(--card)); color: var(--text); width: 100%;">
-        <div style="display: flex; gap: 5px; margin-top: 0.5rem;">
-          <button onclick="saveEdit(${task.id})" style="padding: 0.4rem 0.8rem; background: #22c55e; border: none; border-radius: var(--radius); color: #fff; cursor: pointer;">Save</button>
-          <button onclick="cancelEdit(${task.id})" style="padding: 0.4rem 0.8rem; background: #94a3b8; border: none; border-radius: var(--radius); color: #fff; cursor: pointer;">Cancel</button>
-        </div>
-      </div>
-    `;
-    // Focus the input and handle keyboard shortcuts
-    const input = div.querySelector('input');
-    if (input) {
-      requestAnimationFrame(() => input.focus());
-      input.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') saveEdit(task.id);
-        if (e.key === 'Escape') cancelEdit(task.id);
-      });
-    }
-    return div;
-  }
 
   div.innerHTML = `
     <div class="drag-handle" title="Drag to reorder"><i class="ri-drag-move-fill"></i></div>
@@ -1745,9 +1721,14 @@ function createTaskEl(task) {
     });
   }
 
-  // Edit task event — inline editing
   div.querySelector(".edit-btn").addEventListener("click", () => {
-    editTask(task.id);
+    const updated = prompt("Edit your quest", task.text);
+    if (updated !== null && updated.trim() !== "") {
+      task.text = updated;
+      saveData();
+      renderTasks();
+      announce(`Task edited to: "${updated}"`);
+    }
   });
 
   // HTML5 Drag Listeners on the card
@@ -4137,11 +4118,11 @@ function renderProfile() {
       avatarPlaceholder.style.display = "none";
     } else {
       if (profile.gender === "Female") {
-        avatarImg.src = "assets/female_avatar.svg";
+        avatarImg.src = "female_avatar.svg";
         avatarImg.style.display = "block";
         avatarPlaceholder.style.display = "none";
       } else {
-        avatarImg.src = "assets/male_avatar.svg";
+        avatarImg.src = "male_avatar.svg";
         avatarImg.style.display = "block";
         avatarPlaceholder.style.display = "none";
       }
