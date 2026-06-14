@@ -2377,10 +2377,24 @@ function renderSubjectTracker() {
 
   if (!subjects || subjects.length === 0) {
     grid.innerHTML = `
-      <div class="empty-state" style="grid-column:1/-1; text-align:center; padding:40px;">
-        <i class="ri-book-open-line" style="font-size: 2.5rem; opacity: 0.3;"></i>
+      <div class="empty-state enhanced-empty" style="grid-column:1/-1; text-align:center; padding:60px 40px; border-radius: var(--radius-lg); background: rgba(255, 255, 255, 0.015); border: 1px dashed var(--border);">
+        <svg width="120" height="90" viewBox="0 0 120 90" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="margin: 0 auto 20px;">
+          <defs>
+            <linearGradient id="subjGrad" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stop-color="#10b981" />
+              <stop offset="1" stop-color="#06b6d4" />
+            </linearGradient>
+          </defs>
+          <rect x="20" y="10" width="80" height="70" rx="6" fill="url(#subjGrad)" opacity="0.2" />
+          <path d="M40 30h40M40 45h40M40 60h25" stroke="url(#subjGrad)" stroke-width="4" stroke-linecap="round" />
+          <circle cx="90" cy="70" r="14" fill="#06b6d4" opacity="0.8" />
+          <path d="M85 70l4 4 8-8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
         <h3>No subjects added yet</h3>
-        <p>Create a subject to track homework, revision, and mastery progress.</p>
+        <p class="muted" style="max-width: 400px; margin: 0 auto 24px; opacity: 0.85;">Organize your learning by creating a subject to track your homework, revision, and overall mastery progress.</p>
+        <div class="empty-cta-row" style="display:flex; justify-content:center; gap:12px;">
+          <button class="view-btn primary" onclick="document.getElementById('addSubjectBtn').click()" style="background: var(--primary); color: white; border: none; padding: 10px 20px; font-weight: 600;">Add Your First Subject</button>
+        </div>
       </div>
     `;
     return;
