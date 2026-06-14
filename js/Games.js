@@ -406,4 +406,3 @@ const saveGameState = (gameId, state) => {
     console.warn('Could not save game state');
   }
 };
-
