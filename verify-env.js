@@ -33,12 +33,12 @@ const CRITICAL_FILES = [
 console.log("📂 File Checks:");
 let missingFiles = 0;
 CRITICAL_FILES.forEach(file => {
-  const filePath = path.join(__dirname, file);
+  const filePath = path.join(__dirname, file.path);
   if (fs.existsSync(filePath)) {
     const stats = fs.statSync(filePath);
-    console.log(`  ✅ ${file} - Found (${(stats.size / 1024).toFixed(2)} KB)`);
+    console.log(`  ✅ ${file.name} - Found (${(stats.size / 1024).toFixed(2)} KB)`);
   } else {
-    console.log(`  ❌ ${file} - Missing!`);
+    console.log(`  ❌ ${file.name} - Missing!`);
     missingFiles++;
   }
 });
